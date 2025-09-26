@@ -1,0 +1,75 @@
+﻿@page "/register"
+@using DoYouOwnIt.Client.Services
+@inject IAuthService AuthService
+
+<h3>Register a New Account</h3>
+
+<EditForm Model="newUser" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+	<div>
+		<label for="username">Username:</label>
+		<InputText id="username" @bind-Value="newUser.Username" class="form-control"/>
+		<ValidationMessage For="() => newUser.Username" />
+	</div>
+	<div>
+		<label for="email">Email:</label>
+		<InputText id="email" type="email" @bind-Value="newUser.Email" class="form-control" />
+		<ValidationMessage For="() => newUser.Email" />
+	</div>
+	<div>
+		<label for="DOB">Date of Birth</label>
+		<InputDate id="DOB" @bind-Value="newUser.DateOfBirth" class="form-control" />
+		<ValidationMessage For="() => newUser.DateOfBirth" />
+	</div>
+	<div>
+		<label for="password">Password:</label>
+		<InputText id="password" type="password" @bind-Value="newUser.Password" class="form-control" />
+		<ValidationMessage For="() => newUser.Password" />
+	</div>
+	<div>
+		<label for="confirmPassword">Confirm Password:</label>
+		<InputText id="confirmPassword" type="password" @bind-Value="newUser.ConfirmPassword" class="form-control" />
+		<ValidationMessage For="() => newUser.ConfirmPassword" />
+	</div>
+	<button class="btn btn-primary mt-2" type="submit">Register</button>
+</EditForm>
+
+@if (registrationFailed)
+{
+	@foreach(var error in registrationErrors)
+	{
+		<div class="alert alert-danger mt-2">@error</div>
+	}
+}
+@if (registrationSuccessful)
+{
+	<div class="alert alert-success mt-2">Registration successful! You can now log in.</div>
+}
+
+@code {
+	AccountRegistrationRequest newUser = new AccountRegistrationRequest();
+	bool registrationFailed = false;
+	bool registrationSuccessful = false;
+	List<string> registrationErrors = new List<string>();
+
+	async Task HandleValidSubmit()
+	{
+		registrationFailed = registrationSuccessful = false;
+		registrationErrors = new List<string>();
+
+		var response = await AuthService.Register(newUser);
+		registrationSuccessful = response.Success;
+
+		if (!registrationSuccessful && response.Errors != null)
+		{
+			registrationFailed = true;
+			registrationErrors = response.Errors.ToList();
+		}
+		else if (!registrationSuccessful)
+		{
+			registrationFailed = true;
+			registrationErrors.Add("An unknown error occurred.");
+		}
+	}
+}

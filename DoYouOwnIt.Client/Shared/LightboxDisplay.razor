@@ -1,0 +1,129 @@
+﻿@using Microsoft.AspNetCore.Components
+@namespace DoYouOwnIt.Client.Shared
+@inject IJSRuntime JSRuntime
+
+
+<h3>Example Pictures</h3>
+<hr/>
+
+
+<div class="display-gallery">
+	@foreach (var (image, index) in ImageUrls.Select((value, i) => (value, i)))
+	{
+		<div class="gallery-item">
+			<img src="@image" class="img-thumbnail" alt="@ImageAlts.ElementAtOrDefault(index)" style="max-width: min(200px, 100%); max-height: 200px;" @onclick="() => ShowImage(index)" />
+		</div>
+	}
+</div>
+
+<div class="lightbox-container @(_isVisible ? "visible" : "")" @onclick="CloseLightbox">
+	<div class="lightbox-content" @onclick:stopPropagation>
+		@if (_isVisible)
+		{
+			<button class="lightbox-close" @onclick="CloseLightbox">&times;</button>
+			<img src="@CurrentImageSrc" alt="@CurrentImageAlt" class="lightbox-image" />
+			@if (ShowNavigation && ImageUrls?.Count > 1)
+			{
+				<div class="lightbox-navigation">
+					<button class="lightbox-nav prev" @onclick="PreviousImage" aria-label="Previous image">
+						&lt; <!-- Or use SVG icon here -->
+					</button>
+					<button class="lightbox-nav next" @onclick="NextImage" aria-label="Next image">
+						&gt; <!-- Or use SVG icon here -->
+					</button>
+				</div>
+			}
+			@if (ShowCounter && ImageUrls?.Count > 1)
+			{
+				<div class="lightbox-counter">
+					@(_currentImageIndex + 1) / @ImageUrls.Count
+				</div>
+			}
+			<p class="lightbox-caption">@CurrentImageAlt</p>
+		}
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public List<string> ImageUrls { get; set; } = new List<string>();
+	[Parameter]
+	public List<string> ImageAlts { get; set; } = new List<string>();
+	[Parameter]
+	public bool ShowNavigation { get; set; } = true;
+	[Parameter]
+	public bool ShowCounter { get; set; } = true;
+
+	private bool _isVisible;
+	private int _currentImageIndex = 0;
+
+	private string CurrentImageSrc => ImageUrls.Count > 0 ? ImageUrls[_currentImageIndex] : string.Empty;
+	private string CurrentImageAlt => ImageAlts.Count > 0 ? ImageAlts[_currentImageIndex] : string.Empty;
+
+	private IJSObjectReference? _jsModule;
+
+	public void ShowImage(int index)
+	{
+		if (index >= 0 && index < ImageUrls.Count)
+		{
+			_currentImageIndex = index;
+			_isVisible = true;
+			StateHasChanged();
+		}
+	}
+
+	public void CloseLightbox()
+	{
+		_isVisible = false;
+		// StateHasChanged();
+	}
+	public void NextImage()
+	{
+		if (ImageUrls.Count > 0)
+		{
+			_currentImageIndex = (_currentImageIndex + 1) % ImageUrls.Count;
+			// StateHasChanged();
+		}
+	}
+	public void PreviousImage()
+	{
+		if (ImageUrls.Count > 0)
+		{
+			_currentImageIndex = (_currentImageIndex - 1 + ImageUrls.Count) % ImageUrls.Count;
+			// StateHasChanged();
+		}
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			_jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+				"import", "./Shared/LightboxDisplay.razor.js");
+
+			await _jsModule.InvokeVoidAsync(
+				"setupLightboxKeyboard",
+				DotNetObjectReference.Create(this));
+		}
+	}
+
+	[JSInvokable]
+	public void HandleKeyDown(string key)
+	{
+		if (!_isVisible) return;
+
+		switch (key)
+		{
+			case "Escape":
+				CloseLightbox();
+				break;
+			case "ArrowLeft":
+				PreviousImage();
+				break;
+			case "ArrowRight":
+				NextImage();
+				break;
+		}
+		StateHasChanged();
+	}
+}

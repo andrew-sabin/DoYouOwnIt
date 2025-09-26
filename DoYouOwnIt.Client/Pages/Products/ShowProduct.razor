@@ -1,0 +1,121 @@
+﻿@page "/products/{Id:int}"
+@page "/products/{Slug}"
+@using DoYouOwnIt.Client.Pages.Formats
+@inject HttpClient _http
+@inject IProductService ProductService
+@inject NavigationManager NavigationManager
+
+
+
+@if(isLoading)
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/products">Products</a></li>
+			<li class="breadcrumb-item active">Unknown</li>
+		</ol>
+	</nav>
+	<div class="spinner-border" role="status">
+		<span class="visually-hidden">Loading...</span>
+	</div>
+}
+else
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/products">Products</a></li>
+			<li class="breadcrumb-item active">@product.Value.Name</li>
+		</ol>
+	</nav>
+	<hr />
+	<div class="product-display-container">
+		<div class="product-image-column">
+			<img src="@product.Value.CoverImageURL" style="max-width: min(300px, 100%); max-height: 300px;" class="img-thumbnail" />
+		</div>
+
+		<div class="product-details-column">
+			<h2>@product.Value.Name</h2>
+			<h3>@product.Value.Category?.Category</h3>
+			<h3>Creators: @product.Value.Creators</h3>
+			@if (product.Value.IsAIAssisted)
+			{
+				<h3>Used AI with the creation of the product</h3>
+				<p>@product.Value.AIAssistsWith</p>
+			}
+			@if (product.Value.ForMatureAudiences)
+			{
+				<h3>For Mature Audiences Only</h3>
+				<h4>Reason:</h4>
+				<p>@product.Value.MatureAudienceReason</p>
+			}
+			<h3>Release Date: @product.Value.ProductLaunchDate</h3>
+			@if (product.Value.CreatorId != null)
+			{
+				<h3>Added In By:</h3>
+				<DisplayUserInfo UserId="@product.Value.CreatorId" />
+			}
+			<h3>Last Modified: @product.Value.LastModified.ToString("yyyy-MM-dd")</h3>
+			@if (product.Value.ModifierId != null)
+			{
+				<h3>Last Edited By:</h3>
+				<DisplayUserInfo UserId="@product.Value.ModifierId" />
+			}
+			<button class="btn btn-primary" onclick="@(() => EditProduct(product.Value.Slug))">
+				Edit Product
+			</button>
+			<hr />
+			<h3>Description:</h3>
+			<p>@product.Value.Description</p>
+		</div>
+	</div>
+}
+<FormatsPerProduct ProductSlug="@product!.Value.Slug" ProductId="product!.Value.Id" />
+
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	private bool isLoading = true;
+
+	private ProductResponse? product = new ProductResponse();
+
+	protected override async Task OnParametersSetAsync()
+	{
+
+		if (Id == 0 && string.IsNullOrEmpty(Slug))
+		{
+			NavigationManager.NavigateTo("notfound");
+		}
+		else if (Id > 0)
+		{
+			var prodResponse = await ProductService.GetProductById((int)Id);
+			if (prodResponse == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+			}
+			product = prodResponse;
+		}
+		else if (!string.IsNullOrEmpty(Slug))
+		{
+			var prodResponse = await ProductService.GetProductBySlug(Slug);
+			if (prodResponse == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+			}
+			product = prodResponse;
+		}
+		isLoading = false;
+	}
+
+	private void EditProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/{id}/edit");
+	}
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/{slug}/edit");
+	}
+}

@@ -1,0 +1,39 @@
+﻿@page "/editor"
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.RichTextEditor
+
+<SfRichTextEditor Placeholder="@Placeholder" @bind-Value="@Content" MaxLength="2000" ShowCharCount="true">
+    <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow" />
+</SfRichTextEditor>
+
+
+@code {
+    [Parameter]
+	public string Content { get; set; } = string.Empty;
+    [Parameter]
+    public string Placeholder { get; set; } = "Please enter in a review here....";
+
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>()
+    {
+        new ToolbarItemModel() { Command = ToolbarCommand.Bold },
+        new ToolbarItemModel() { Command = ToolbarCommand.Italic },
+        new ToolbarItemModel() { Command = ToolbarCommand.Underline },
+        new ToolbarItemModel() { Command = ToolbarCommand.StrikeThrough },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Formats },
+        new ToolbarItemModel() { Command = ToolbarCommand.Alignments },
+        new ToolbarItemModel() { Command = ToolbarCommand.Blockquote },
+		new ToolbarItemModel() { Command = ToolbarCommand.NumberFormatList },
+        new ToolbarItemModel() { Command = ToolbarCommand.BulletFormatList },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.HorizontalLine},
+        new ToolbarItemModel() { Command = ToolbarCommand.CreateLink },
+        new ToolbarItemModel() { Command = ToolbarCommand.Image },
+		new ToolbarItemModel() { Command = ToolbarCommand.CreateTable },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+		new ToolbarItemModel() { Command = ToolbarCommand.SourceCode },
+        new ToolbarItemModel() { Command = ToolbarCommand.Undo },
+		new ToolbarItemModel() { Command = ToolbarCommand.Redo }
+}
+;
+}

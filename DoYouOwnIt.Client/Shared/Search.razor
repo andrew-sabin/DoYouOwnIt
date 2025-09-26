@@ -1,0 +1,55 @@
+﻿@inject NavigationManager NavigationManager
+@inject IProductCategoryService CategoryService
+
+@page "/search"
+<h3>Search</h3>
+
+<div class="mb-3">
+	<label>Product Name</label>
+	<input type="text" @bind-value="@ProductName" />
+</div>
+
+<div class="col-md-4">
+	<select class="form-select" @bind="CategoryId">
+		<option value="0">All Categories</option>
+		@foreach (var category in Categories)
+		{
+			<option value="@category.Id">@category.Category</option>
+		}
+	</select>
+</div>
+
+<button class="btn btn-primary" @onclick="Send">Search</button>
+
+
+@code {
+	[Parameter]
+	[SupplyParameterFromQuery]
+	public string ProductName { get; set; } = string.Empty;
+
+	[Parameter]
+	[SupplyParameterFromQuery]
+	public int? CategoryId { get; set; }
+
+	private List<ProductCategoryResponse> Categories { get; set; } = new List<ProductCategoryResponse>();
+
+	protected override async Task OnInitializedAsync()
+	{
+		Categories = await CategoryService.GetAllProductCategories();
+	}
+
+	void Send()
+	{
+		if (CategoryId == null)
+		{
+			CategoryId = 0;
+		}
+		var dictionary = new Dictionary<string, object?>()
+		{
+			{"title", ProductName},
+			{"category", CategoryId}
+		};
+		var newURI = NavigationManager.GetUriWithQueryParameters(dictionary);
+		NavigationManager.NavigateTo("/products?title=" + ProductName + "&category=" + CategoryId, true);
+	}
+}

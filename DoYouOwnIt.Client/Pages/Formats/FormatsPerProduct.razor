@@ -1,0 +1,195 @@
+﻿@using Microsoft.AspNetCore.Components.QuickGrid
+@inject IFormatService FormatService
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+
+<hr />
+<h3>Formats Available</h3>
+<button class="btn btn-primary" mb-2 @onclick="CreateFormat">
+	Create Format
+</button>
+<br />
+
+<input @bind="formatFilter" placeholder="Search formats by Type or Edition..." class="form-control mb-3" />
+
+
+
+<QuickGrid Items="filteredFormats" Pagination="@pagination">
+    <PropertyColumn Property=" p => p.Type" Sortable="true"/>
+    <PropertyColumn Property=" p => p.Edition" />
+    <TemplateColumn title="Level of Ownership" Sortable="true">
+		<ChildContent Context="p">
+			@GetEnumDisplayName(p.OwnershipLevel)
+        </ChildContent>
+     </TemplateColumn>
+    <PropertyColumn Property=" p => p.ReleaseDate" Title="Release Date" Sortable="true"/>
+    <TemplateColumn Context="format">
+        <a href="@($"products/{ProductSlug}/formats/{CreateIDHash(format.Id)}")">See Format Details</a>
+        <a href="@($"products/{ProductSlug}/formats/{CreateIDHash(format.Id)}/edit")">Edit Format</a>
+    </TemplateColumn>
+</QuickGrid>
+
+<div class="page-buttons">
+    Page(s):
+    @if (pagination.TotalItemCount.HasValue)
+    {
+        for (var pageIndex = 0; pageIndex <= pagination.LastPageIndex; pageIndex++)
+        {
+            var capturedIndex = pageIndex; // Capture the current page index
+            <button @onclick="@(() => GoToPageAsync(capturedIndex))"
+                class="btn btn-primary @PageButtonClass(capturedIndex)"
+                aria-current="@AriaCurrentValue(capturedIndex)"
+                aria-label="Go to page @(pageIndex + 1)">
+                                        @(pageIndex + 1)
+            </button>
+        }
+    }
+</div>
+
+
+@code {
+    [Parameter]
+    public int? ProductId { get; set; }
+    [Parameter]
+    public string? ProductSlug { get; set; }
+
+    [Inject]
+    public IConfiguration Configuration { get; set; }
+
+    private int minLength { get; set; }
+    private string alphabet { get; set; } = string.Empty;
+
+    private string formatFilter = string.Empty;
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 5 };
+
+    private List<FormatResponse> formats = new List<FormatResponse>();
+    private IQueryable<FormatResponse>? queryableFormats;
+    private IQueryable<FormatResponse>? filteredFormats => queryableFormats?.Where(f => f.Type.Contains(formatFilter, StringComparison.OrdinalIgnoreCase) || f.Edition.Contains(formatFilter));
+
+
+    protected override void OnInitialized()
+    {
+        minLength = Configuration.GetValue<int>("Sqids:MinLength");
+        alphabet = Configuration["Sqids:Alphabet"];
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(ProductSlug) && ProductId == 0 || ProductId == null)
+        {
+            await LoadFormatsFromSlug();
+        }
+        else if (ProductId > 0)
+        {
+            await LoadFormats();
+        }
+    }
+
+    private async Task GoToPageAsync(int pageIndex)
+    {
+        await pagination.SetCurrentPageIndexAsync(pageIndex);
+    }
+
+    private string? PageButtonClass(int pageIndex) => pagination.CurrentPageIndex == pageIndex ? "current" : null;
+
+    private string? AriaCurrentValue(int pageIndex) => pagination.CurrentPageIndex == pageIndex ? "page" : null;
+
+    private async Task LoadFormats()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/format/product/{ProductId}");
+
+            // Add this debug output
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"API Response: {responseContent}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await Http.GetFromJsonAsync<List<FormatResponse>>($"api/format/product/{ProductId}");
+                queryableFormats = result?.AsQueryable();
+            }
+            else
+            {
+                Console.WriteLine($"Error: {response.StatusCode} - {responseContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+    private async Task LoadFormatsFromSlug()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/format/product/slug/{ProductSlug}");
+			var productResponse = await Http.GetFromJsonAsync<ProductResponseNoCategory>($"api/product/slug/{ProductSlug}");
+
+            // Add this debug output
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"API Response: {responseContent}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await Http.GetFromJsonAsync<List<FormatResponse>>($"api/format/product/{productResponse.Id}");
+                queryableFormats = result?.AsQueryable();
+            }
+            else
+            {
+                Console.WriteLine($"Error: {response.StatusCode} - {responseContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+    private void CreateFormat()
+    {
+        NavigationManager.NavigateTo($"/products/{ProductId}/formats/create");
+    }
+
+    private string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Name ?? value.ToString();
+    }
+
+    private string GetEnumDisplayDescription(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Description ?? value.ToString();
+    }
+    
+    private string GetEnumDisplayGroup(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.GroupName ?? value.ToString();
+    }
+}
+
+

@@ -1,0 +1,205 @@
+﻿@page "/products/create"
+@page "/products/{Id:int}/edit"
+@page "/products/{Slug}/edit"
+@inject IProductService ProductService
+@inject IProductCategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+@attribute [Authorize (Roles ="Admin,Moderator,AlphaTester")]
+
+@if (Id is not null)
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/products">Products</a></li>
+			<li class="breadcrumb-item"><a href="/products/@Id">@product.Name</a></li>
+			<li class="breadcrumb-item active">@product.Name Edit</li>
+		</ol>
+	</nav>
+	<h3>Edit Product Information</h3>
+}
+else
+{
+	<h3>Create New Product</h3>
+}
+
+<EditForm Model="product" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<div>
+		<label for="productName">Product Name</label>
+		<InputText id="productName" class="form-control" @bind-Value="product.Name" />
+	</div>
+	@if (!String.IsNullOrEmpty(product.Slug))
+	{
+		<div>
+			<label for="productSlug">Product Slug</label>
+			<InputText id="productSlug" class="form-control" @bind-Value="product.Slug" />
+		</div>
+	}
+	<div>
+		<label for="productCategory">Category</label>
+		<InputSelect id="category" @bind-Value="product.CategoryId" class="form-select">
+			<option value="0">---Select A Category---</option>
+			@foreach (var category in CategoryService.ProductCategories)
+			{
+				<option value="@category.Id">@category.Category</option>
+			}
+		</InputSelect>
+		<ValidationMessage For="@(() => product.CategoryId)" />
+	</div>
+	<div>
+		<label for="productCoverImage">Product Logo URL</label>
+		<InputText id="productCoverImage" class="form-control" @bind-Value="product.CoverImageURL" />
+	</div>
+	<div>
+		<label for="productCreators">Product Creators</label>
+		<InputText id="productCreators" class="form-control" @bind-Value="product.Creators" />
+	</div>
+	<div>
+		<label for="productLaunchDate">Product Launch Date</label>
+		<InputDate id="productLaunchDate" class="form-control" format="mm/dd/yyyy" @bind-Value="product.ProductLaunchDate" />
+	</div>
+	<div>
+		<label class="form-check-label" for="productIsAIAssisted">Did AI Assist with the Making of This Product?</label>
+		<InputCheckbox id="productIsAIAssisted" class="form-check-input" @bind-Value="product.IsAIAssisted" />
+	</div>
+	@if (product.IsAIAssisted)
+	{
+		<label for="productAIAssistsWith">AI Assisted With</label>
+		<InputTextArea id="productAIAssistsWith" class="form-control" @bind-Value="product.AIAssistsWith" />
+	}
+	<div>
+		<label class="form-check-label" for="productMatureBool">Is This a Product Intended For Mature Audiences</label>
+		<InputCheckbox id="productMatureBool" class="form-check-input" @bind-Value="product.ForMatureAudiences" />
+	</div>
+	@if (product.ForMatureAudiences)
+	{
+		<label for="productMatureReason">Mature Audience Reason</label>
+		<InputTextArea id="productMatureReason" class="form-control" @bind-Value="product.MatureAudienceReason"/>
+	}
+	<div>
+		<label for="productDescription">Description or Summary</label>
+		<InputTextArea id="productDescription" class="form-control" @bind-Value="product.Description" />
+	</div>
+	
+	@if(Id != null)
+	{
+		<button type="button" class="btn btn-danger mt-4 mx-2"
+			@onclick="DeleteProduct">
+			Delete
+		</button>
+	}
+	<button type="submit" class="btn btn-primary mt-4">Submit</button>
+	<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+</EditForm>
+
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	ProductRequest product = new ProductRequest();
+
+	protected override void OnInitialized()
+	{
+		// Ensure that the product categories are loaded when the component is initialized
+		if (CategoryService.ProductCategories.Count == 0)
+		{
+			CategoryService.LoadAllProductCategories();
+		}
+		CategoryService.OnChange += StateHasChanged;
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!String.IsNullOrEmpty(Slug))
+		{
+			var result = await ProductService.GetProductBySlug(Slug);
+			product = new ProductRequest
+			{
+				Name = result.Value.Name,
+				Slug = result.Value.Slug,
+				ProductLaunchDate = result.Value.ProductLaunchDate,
+				Creators = result.Value.Creators,
+				CoverImageURL = result.Value.CoverImageURL,
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith,
+				ForMatureAudiences = result.Value.ForMatureAudiences,
+				MatureAudienceReason = result.Value.MatureAudienceReason,
+				Description = result.Value.Description,
+				CategoryId = result.Value.Category.Id
+				// Map other properties as needed
+			};
+		}
+		if(Id is not null)
+		{
+			var result = await ProductService.GetProductById((int)Id);
+			product = new ProductRequest
+			{
+				Name = result.Value.Name,
+				Slug = result.Value.Slug,
+				ProductLaunchDate = result.Value.ProductLaunchDate,
+				Creators = result.Value.Creators,
+				CoverImageURL = result.Value.CoverImageURL,
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith,
+				ForMatureAudiences = result.Value.ForMatureAudiences,
+				MatureAudienceReason = result.Value.MatureAudienceReason,
+				Description = result.Value.Description,
+				CategoryId = result.Value.Category.Id
+				// Map other properties as needed
+			};
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		if (Id == null)
+		{
+			await ProductService.CreateProduct(product);
+			Console.WriteLine($"Created a new Product {product.Name}.");
+			NavigationManager.NavigateTo("/products");
+		}
+		else
+		{
+			await ProductService.UpdateProduct((int)Id, product);
+			Console.WriteLine($"Edited product with ID: {Id}");
+			NavigationManager.NavigateTo($"/products/{Id}");
+		}
+
+		// Optionally, redirect or show a success message
+	}
+
+	async Task DeleteProduct()
+	{
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this product?");
+		if(Id != null && confirmed)
+		{
+			await ProductService.DeleteProduct((int)Id);
+			NavigationManager.NavigateTo("/products");
+		}
+
+	}
+
+	async Task CancelEdit()
+	{
+		if(Id is not null)
+		{
+			NavigationManager.NavigateTo($"/products/{Slug}");
+		}
+		else
+		{
+			NavigationManager.NavigateTo("/products");
+		}
+	}
+
+
+	public void Dispose()
+	{
+		// Unsubscribe from the event to prevent memory leaks
+		CategoryService.OnChange -= StateHasChanged;
+	}
+}

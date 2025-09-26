@@ -1,0 +1,127 @@
+﻿@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles="Admin, Moderator")]
+
+@page "/stores"
+
+<h3>List of Available Stores</h3>
+
+<button class="btn btn-primary mb-2" @onclick="CreateStore">
+	Create New Store
+</button>
+<br />
+
+<input @bind="storeFilter" placeholder="Search stores by Name or Industry..." class="form-control mb-3" />
+<br />
+<QuickGrid Items="filteredStores" Pagination="@paginationState">
+	<TemplateColumn Title="Logo" Sortable="false">
+		<ChildContent Context="s">
+			@if (!string.IsNullOrEmpty(s.LogoURL))
+			{
+				<a href="/stores/@s.Slug"><img src="@s.LogoURL" alt="@s.Name Logo" style="max-width: 100px; max-height: 100px;" /></a>
+			}
+			else
+			{
+				<span>No Logo</span>
+			}
+		</ChildContent>
+	</TemplateColumn>
+	<PropertyColumn Property="s => s.Name" Sortable="true" />
+	<PropertyColumn Property="s => s.Industry" Sortable="true" />
+	<TemplateColumn Title="Online Orders" Sortable="true">
+		<ChildContent Context="s">
+			@if (s.Online)
+			{
+				<span class="badge bg-success">Available</span>
+			}
+			else
+			{
+				<span class="badge bg-danger">Not Available</span>
+			}
+		</ChildContent>
+		</TemplateColumn>
+	<TemplateColumn Title="Headquarters" Sortable="true">
+		<ChildContent Context="s">
+			<span>@s.City, @s.State, @s.Country</span>
+		</ChildContent>
+	</TemplateColumn>
+	<TemplateColumn Context="store">
+		<a href="@($"stores/{store.Slug}")">View Store Details</a>
+		<a href="@($"stores/edit/{store.Slug}")">Edit Store</a>
+	</TemplateColumn>
+</QuickGrid>
+
+<div class="page-buttons">
+	Page:
+	@if (paginationState.TotalItemCount.HasValue)
+	{
+		for (var pageIndex = 0; pageIndex <= paginationState.LastPageIndex; pageIndex++)
+		{
+			var capturedIndex = pageIndex; // Capture the current page index
+			<button @onclick="@(() => GoToPageAsync(capturedIndex))"
+				class="btn btn-primary @PageButtonClass(capturedIndex)"
+				aria-current="@AriaCurrentValue(capturedIndex)"
+				aria-label="Go to page @(pageIndex + 1)">
+				@(pageIndex + 1)
+			</button>
+		}
+	}
+</div>
+
+@code {
+	PaginationState paginationState = new PaginationState { ItemsPerPage = 10 };
+	private string storeFilter = string.Empty;
+
+	private List<StoreResponse> stores = new List<StoreResponse>();
+	private IQueryable<StoreResponse>? queryableStores;
+	private IQueryable<StoreResponse>? filteredStores => queryableStores?.Where(s => s.Name.Contains(storeFilter, StringComparison.OrdinalIgnoreCase) || s.Industry.Contains(storeFilter, StringComparison.OrdinalIgnoreCase));
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadStores();
+		paginationState.TotalItemCountChanged += (sender, EventArgs) => StateHasChanged();
+	}
+
+	private async Task LoadStores()
+	{
+		try
+		{
+			var response = await Http.GetAsync("api/store");
+			// Add this debug output
+			var responseContent = await response.Content.ReadAsStringAsync();
+			if (response.IsSuccessStatusCode)
+			{
+				if (string.IsNullOrEmpty(responseContent))
+				{
+					Console.WriteLine("No stores found.");
+					return;
+				}
+				var result = await response.Content.ReadFromJsonAsync<List<StoreResponse>>();
+				queryableStores = result?.AsQueryable();
+			}
+			else
+			{
+				Console.WriteLine($"Error: {response.StatusCode} - {responseContent}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error loading stores: {ex.Message}");
+		}
+	}
+
+	private async Task GoToPageAsync(int pageIndex)
+	{
+		await paginationState.SetCurrentPageIndexAsync(pageIndex);
+	}
+
+	private string? PageButtonClass(int pageIndex) => paginationState.CurrentPageIndex == pageIndex ? "current" : null;
+
+	private string? AriaCurrentValue(int pageIndex) => paginationState.CurrentPageIndex == pageIndex ? "page" : null;
+
+	private void CreateStore()
+	{
+		NavigationManager.NavigateTo("/stores/create");
+	}
+
+}

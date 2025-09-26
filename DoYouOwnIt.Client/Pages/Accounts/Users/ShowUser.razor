@@ -1,0 +1,142 @@
+﻿@page "/users/{UserName}"
+@attribute [AllowAnonymous]
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<UserCustomize> Logger
+@inject IUserService UserService
+
+@if (isLoading)
+{
+	<div class="spinner-border" role="status">
+		<span class="visually-hidden">Loading...</span>
+	</div>
+}
+else
+{
+	@if (user == null)
+	{
+		<p>User not found.</p>
+	}
+	else
+	{
+		<div class="user-image">
+			@if (!String.IsNullOrEmpty(user.Value.ProfileImageURL))
+			{
+				<img src="@user.Value.ProfileImageURL" alt="Profile Image" class="rounded-circle" style="max-width: 150px; max-height: 150px;" />
+			}
+			else
+			{
+				<img src="/images/placeholder/default-profile.png" alt="Default Profile Image" class="rounded-circle" style="max-width: 150px; max-height: 150px;" />
+			}
+		</div>
+		<div class="user-information">
+			@if (!String.IsNullOrEmpty(user.Value.DisplayName))
+			{
+				<h2>@user.Value.DisplayName's Profile </h2>
+				<h3>(@user.Value.UserName)</h3>
+			}
+			else
+			{
+				<h2>@user.Value.UserName's Profile</h2>
+			}
+			<p><strong>Joined On:</strong> @user.Value.CreatedAt.ToString("MMMM dd, yyyy")</p>
+			@if (!String.IsNullOrEmpty(user.Value.WebsiteURL))
+			{
+				<p><strong>Website:</strong><a href="@user.Value.WebsiteURL">@user.Value.WebsiteURL</a></p>
+			}
+		</div>
+		<div class="user-ban">
+			@if (user.Value.IsBanned)
+			{
+				<p class="text-danger"><strong>This user is banned.</strong></p>
+				<p><strong>Ban Reason:</strong> @user.Value.BanReason</p>
+				<p><strong>Banned Expires:</strong> @user.Value.BanEndDate?.ToString("MMMM dd, yyyy")</p>
+			}
+		</div>
+		<div class="user-bio">
+			<p>
+				<strong>Bio:</strong><br />
+				@user.Value.Bio
+			</p>
+		</div>
+	}
+	<!-- Add more user details as needed -->
+
+	@if (isAuthorized)
+	{
+		<button class="btn btn-primary" onclick="@(() => CustomizeUserPage(UserName!))">
+			Customize Profile
+		</button>
+	}
+	<AuthorizeView Roles="Admin, Moderator">
+		<Authorized>
+			<button class="btn btn-primary" onclick="@(() => AdminEditUserPage(UserName!))">
+				Edit User (Admin)
+			</button>
+		</Authorized>
+	</AuthorizeView>
+}
+
+@code {
+	[Parameter]
+	public string? UserName { get; set; }
+	private UserResponse? user = new UserResponse();
+
+	private bool isAuthorized = false;
+	private bool isLoading = true;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.IsNullOrWhiteSpace(UserName))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		else
+		{
+			try
+			{
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+				if (!user.Identity?.IsAuthenticated ?? true)
+				{
+					NavigationManager.NavigateTo("notfound");
+					return;
+				}
+				var currentUserName = user.Identity.Name;
+				isAuthorized = string.Equals(currentUserName, UserName, StringComparison.OrdinalIgnoreCase);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error during authorization check for user {UserName}", UserName);
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			finally
+			{
+				isLoading = false;
+			}
+			var result = await UserService.GetUserAsync(UserName);
+			if (result == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			else
+			{
+				user = result;
+			}
+		}
+	}
+
+	private void CustomizeUserPage(string userName)
+	{
+		NavigationManager.NavigateTo($"/users/{userName}/customize");
+	}
+
+	private void AdminEditUserPage(string userName)
+	{
+		NavigationManager.NavigateTo($"/users/{userName}/admin");
+	}
+}
+

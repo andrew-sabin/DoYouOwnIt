@@ -1,0 +1,274 @@
+﻿@page "/products"
+@using DoYouOwnIt.Client.Shared
+@inject IProductService ProductService
+@inject IProductCategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+<PageTitle>Products</PageTitle>
+
+<h3>Products</h3>
+
+<nav aria-label="breadcrumb">
+	<ol class="breadcrumb">
+		<li class="breadcrumb-item active">Products</li>
+	</ol>
+</nav>
+
+<div class="category-display">
+	@if(productCategory != null)
+	{
+		<h2>@productCategory.Category</h2>
+		<h3>@productCategory.Description</h3>
+	}
+	else{
+		<h2>Products</h2>
+		<h3>All Categories</h3>
+	}
+</div>
+
+<div>
+	<Search ProductName="@ProductQuery" CategoryId="CategoryId"/>
+</div>
+
+@if (!String.IsNullOrEmpty(ProductQuery))
+{
+	<p>Searching for:@ProductQuery</p>
+}
+
+
+<button class="btn btn-primary" mb-2 @onclick="CreateProduct">
+	Create Product
+</button>
+
+@* Full Implementation *@
+<p>Currently on Page: @QueryPage</p>
+@if(productAmount > 0)
+{
+	@foreach (var item in products)
+	{
+		<div class="card my-4">
+			<div class="card-header">
+				<a href="/products/@item.Slug">
+					<h5>@item.Name</h5>
+				</a>
+			</div>
+			<div class="card-body">
+				<div class="product-container">
+				<div class="product-image-column">
+				@if(item.CoverImageURL == null || item.CoverImageURL == "")
+				{
+					<p>
+						<a href="/products/@item.Slug">
+							<img src="@item.CoverImageURL"
+								 style="max-width: min(200px, 100%); max-height: 400px;"
+								 class="img-thumbnail" />
+							</a>
+					</p>
+					<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg" 
+						class="img-thumbnail" 
+						style="max-width: min(200px, 100%); max-height: 300px;" 
+						alt="Missing Image Picture Created By: Khanh Nguyen"/>
+				}
+				else
+				{
+					<p>
+						<a href="/products/@item.Slug">
+							<img src="@item.CoverImageURL"
+								 style="max-width: min(200px, 100%); max-height: 400px;"
+								 class="img-thumbnail" />
+							</a>
+					</p>
+				}
+				</div>
+				<div class="product-details-column">
+				<p>@item.Category.Category</p>
+				<p>First Released: @item.ProductLaunchDate</p>
+				@if (item.IsAIAssisted)
+				{
+					<p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+				}
+				@if (item.ForMatureAudiences)
+				{
+					<p><i class="bi bi-explicit-fill"></i> For Mature Audiences Only</p>
+				}
+				<p>@item.Description</p>
+				<button class="btn btn-primary" onclick="@(() => ViewProduct(item.Slug))">
+					View Product Details
+				</button>
+				<button class="btn btn-primary" data-target="#productFormats"
+					@onclick="() => ShowFormats(item.Id)"
+					aria-expanded="@(productId == item.Id ? "true" : "false")" 
+					area-controls="@("productFormats-{item.Id}")">
+					@(productId == item.Id ? "Hide Formats" : "Show Formats")
+				</button>
+				<button class="btn btn-primary" onclick="@(() => EditProduct(item.Slug))">
+					Edit Product
+				</button>
+				</div>
+			</div>
+			</div>
+			<div class="@($"collapse {(productId == item.Id ? "show" : "")}")" id="@($"productFormats-{item.Id}")">
+				<div class="card card-body mt-2">
+					@if (productId == item.Id)
+					{
+						<FormatsList ProductId="@item.Id" FromProdList=true />
+					}
+				</div>
+			</div>
+		</div>
+	}
+}
+else
+{
+	<p>No products available.</p>
+}
+
+@if (QueryPage > 1)
+{
+	<button class="btn btn-primary mx-2" onclick="@(() => FirstPage())">
+		First Page
+	</button>
+	<button class="btn btn-primary mx-2" onclick="@(() => PrevPage())">
+		<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+	</button>
+}
+else
+{
+	<button class="btn btn-primary mx-2" disabled>
+		First Page
+	</button>
+	<button class="btn btn-primary mx-2" disabled>
+		<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+	</button>
+}
+
+@if (productAmount == PageAmount)
+{
+	<button class="btn btn-primary mx-2" onclick="@(() => NextPage())">
+		Next Page <i class="bi bi-arrow-right-square-fill"></i>
+	</button>
+}
+else
+{
+	<button class="btn btn-primary mx-2" disabled>
+		Next Page <i class="bi bi-arrow-right-square-fill"></i>
+	</button>
+}
+
+
+
+
+@code {
+	[SupplyParameterFromQuery (Name="title")]
+	private string? ProductQuery { get; set; }
+	[SupplyParameterFromQuery(Name = "category")]
+	private int CategoryId { get; set; } = 0;
+	private int QueryPage { get; set; } = 1;
+
+	const int PageAmount = 15;
+
+	private List<ProductResponse> products = new List<ProductResponse>();
+	private ProductCategoryResponse productCategory { get; set; } = new();
+
+	private int productAmount { get; set; }
+	private bool hasSearched = false;
+	int productId;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (CategoryId > 0)
+		{
+			var catresult = await Http.GetFromJsonAsync<ProductCategoryResponse>($"api/productcategory/{CategoryId}");
+			if (catresult != null)
+			{
+				productCategory = catresult;
+			}
+		}
+		if (!String.IsNullOrEmpty(ProductQuery))
+		{
+			await ShowPage();
+		}
+		else
+		{
+			var result = await Http.GetFromJsonAsync<List<ProductResponse>>("api/product");
+			if (result != null)
+			{
+				products = result;
+			}
+		}
+
+
+
+		// Check for query parameters on page load
+	}
+
+	private void ShowFormats(int id)
+	{
+		if (productId == id)
+		{
+			return;
+		}
+		productId = id;
+		StateHasChanged();
+	}
+
+	private async Task ShowPage()
+	{
+		var results = await Http.GetFromJsonAsync<List<ProductResponse>>($"api/product/search/{CategoryId}/{ProductQuery}?pageNumber={QueryPage}&pageSize={PageAmount}");
+		if (results != null)
+		{
+			products = results;
+			productAmount = products.Count();
+		}
+	}
+
+	private async Task FirstPage()
+	{
+		QueryPage = 1;
+		await ShowPage();
+	}
+
+	protected async Task NextPage()
+	{
+		if (productAmount == 1)
+		{
+			QueryPage++;
+			await ShowPage();
+		}
+	}
+
+	private async Task PrevPage()
+	{
+		if (QueryPage > 1)
+		{
+			QueryPage--;
+			await ShowPage();
+		}
+			
+	}
+
+	private void CreateProduct()
+	{
+		NavigationManager.NavigateTo("/products/create");
+	}
+
+	private void EditProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/{id}/edit");
+	}
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/{slug}/edit");
+	}
+
+	private void ViewProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/{id}/");
+	}
+	private void ViewProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/{slug}/");
+	}
+
+}

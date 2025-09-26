@@ -1,0 +1,32 @@
+﻿<AuthorizeView>
+	<NotAuthorized>
+		<a href="register">Register</a>
+		<a href="login">Login</a>
+	</NotAuthorized>
+	<Authorized>
+		Hello, @context.User.Identity.Name!
+		<a href="logout">Logout</a>
+		<a href="/users/@context.User.Identity.Name">Profile Page</a>
+	</Authorized>
+</AuthorizeView>
+
+
+
+@* <AuthorizeView > 
+	<Authorized>
+		<div class="top-row ps-3 navbar navbar-dark">
+			<a class="navbar-brand" href="">DoYouOwnIt</a>
+			<button class="navbar-toggler" @onclick="ToggleNavMenu">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+		</div>
+	</Authorized>
+	<NotAuthorized>
+		<div class="top-row ps-3 navbar navbar-dark">
+			<a class="navbar-brand" href="">DoYouOwnIt</a>
+			<button class="navbar-toggler" @onclick="ToggleNavMenu">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+		</div>
+	</NotAuthorized>
+</AuthorizeView> *@

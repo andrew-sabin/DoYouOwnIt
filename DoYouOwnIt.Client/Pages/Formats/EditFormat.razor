@@ -1,0 +1,298 @@
+﻿@page "/products/{productId:int}/formats/create"
+@page "/products/{productId:int}/formats/{formatId:int}/edit"
+@page "/products/{productId:int}/formats/{formatHash}/edit"
+@page "/products/{productSlug}/formats/{formatHash}/edit"
+@using DoYouOwnIt.Shared.Enums
+@using DoYouOwnIt.Client.Shared
+@inject IFormatService FormatService
+@inject IProductService ProductService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject IConfiguration Cofiguration
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize(Roles ="Admin, Moderator, AlphaTester")]
+
+@if(formatId == null)
+{
+	@if (productId == null || productSlug == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/@productSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+	}
+	<h3>Create Format</h3>
+}
+else
+{
+	@if (productId == null || productSlug == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active"><a href="/products/@productSlug/formats/@formatId">@format.Type @format.Edition</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/@product.Value.Id">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active"><a href="/products/@productSlug/formats/@formatId">@format.Type @format.Edition</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	<h3>Edit Format</h3>
+
+}
+
+
+
+<EditForm Model="@format">
+	<div class="form-group">
+		<label for="formatCoverURL">Format Cover URL</label>
+		<InputText id="formatCoverURL" class="form-control" @bind-Value="format.CoverImageUrl" />
+	</div>
+	<div class="form-group">
+		<label for="formatType">Type</label>
+		<InputText id="formatType" class="form-control" @bind-Value="format.Type" />
+	</div>
+	<div class="form-group">
+		<label for="formatEdition">Edition</label>
+		<InputText id="formatEdition" class="form-coSntrol" @bind-Value="format.Edition" />
+	</div>
+	@if (formatId != null)
+	{
+		<div>
+			<label for="formatSlug">Format Slug</label>
+			<InputText id="formatSlug" class="form-control" @bind-Value="format.Slug" />
+		</div>
+	}
+	<div class="form-group">
+		<label for="formatReleaseDate">Release Date</label>
+		<InputDate id="formatReleaseDate" class="form-control" format="mm/dd/yyyy" @bind-Value="format.ReleaseDate" />
+	</div>
+	<div class="form-group">
+		<InputCheckbox id="formatIsAIAssisted" class="form-check-input" @bind-Value ="format.IsAIAssisted"/>
+		<label class="form-check-label" for="formatIsAIAssisted">Is the Format AI Assisted</label>
+	</div>
+	@if (format.IsAIAssisted)
+	{
+		<div class="form-group">
+			<label for="formatAIAssistsWith">AI Assists With</label>
+			<InputTextArea id="formatAIAssistsWith" class="form-control" @bind-Value="format.AIAssistsWith" />
+		</div>
+	}
+	<div class="form-group">
+		<label for="formatOwnership">Ownership Level</label>
+		<InputSelect id="formatOwnership" class="form-select" @bind-Value ="format.OwnershipLevel">
+			@foreach (OwnershipLevel level in Enum.GetValues(typeof(OwnershipLevel)))
+			{
+				<option value="@level">@GetEnumDisplayName(level)</option>
+			}
+		</InputSelect>
+	</div>
+	<div class="form-group">
+		<label for="formatDescription">Description/Review </label>
+		<InputTextArea id="formatDescription" class="form-control" @bind-Value="format.Description" />
+	</div>
+</EditForm>
+
+@if(formatId != null)
+{
+	<button type="button" class="btn btn-danger mt-4 mx-2"
+		@click="DeleteFormat">
+		Delete
+	</button>
+}
+<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+
+@code {
+	[Parameter]  
+	public int? formatId { get; set; }
+	[Parameter]
+	public int? productId { get; set; }
+	[Parameter]
+	public string? formatHash { get; set; }
+	[Parameter]
+	public string? productSlug { get; set; }
+
+	[Inject]
+	public IConfiguration Configuration { get; set; }
+
+	private int minLength { get; set; }
+	private string alphabet { get; set; } = string.Empty;
+
+	private RichTextEditor? myEditor;
+	private ProductResponseNoCategory? product = new();
+
+
+	private FormatRequest format = new()  
+	{  
+		OwnershipLevel = OwnershipLevel.DontOwn // Ensure OwnershipLevel is initialized to a default value
+	};
+	
+	protected override void OnInitialized()
+	{
+		minLength = Configuration.GetValue<int>("Sqids:MinLength");
+		alphabet = Configuration["Sqids:Alphabet"];
+	}
+
+	protected override async Task OnParametersSetAsync()  
+	{
+		if (!String.IsNullOrEmpty(formatHash))
+		{
+			formatId = DecodeHash(formatHash);
+		}
+		if (formatId is not null)  
+		{  
+			var result = await FormatService.GetFormatByID((int)formatId);  
+			format = new FormatRequest  
+			{  
+				Type = result.Value.Type,  
+				Edition = result.Value.Edition,
+				CoverImageUrl = result.Value.CoverImageUrl,
+				Slug = result.Value.Slug,
+				ReleaseDate = result.Value.ReleaseDate,  
+				Description = result.Value.Description,  
+				OwnershipLevel = result.Value.OwnershipLevel, // Ensure OwnershipLevel is set from the result  
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith,
+				ProductId = result.Value.Product.Id  
+			};
+			product = result.Value.Product;
+		}
+		else
+		{
+			if (!String.IsNullOrEmpty(productSlug))
+			{
+				var productResult = await ProductService.GetProductBySlug(productSlug);
+				if (productResult != null)
+				{
+					productId = productResult.Value.Id;
+					product = await ProductService.GetProductByIdNoCategory((int)productId);
+				}
+				else
+				{
+					NavigationManager.NavigateTo("notfound");
+					return;
+				}
+			}
+			else if (productId != null)
+			{
+				format.ProductId = productId ?? 0;
+				var productResult = await ProductService.GetProductByIdNoCategory((int)format.ProductId);
+				if (productResult != null)
+				{
+					product = productResult;
+				}
+			}
+			else if (productId == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+		}
+	}
+	
+	private void OnImageUploaded(string imageUrl)
+	{
+		format.CoverImageUrl = imageUrl;
+		StateHasChanged();
+	}
+
+	async Task HandleValidSubmit()  
+	{
+		// await myEditor.UpdateValue();
+
+		if (formatId == null)  
+		{
+			format.Description = myEditor?.Content ?? string.Empty;
+			await FormatService.CreateFormat(format);  
+			Console.WriteLine($"Created a new Format: {format.Type} + {format.Edition}.");  
+			NavigationManager.NavigateTo($"/products/{productSlug}");  
+		}  
+		else  
+		{
+			format.Description = myEditor?.Content ?? string.Empty;
+			await FormatService.UpdateFormat((int)formatId, format);  
+			Console.WriteLine($"Edited format with ID: {formatId}");  
+			NavigationManager.NavigateTo($"/products/{productSlug}/formats/{formatHash}");  
+		}  
+
+		// Optionally, redirect or show a success message  
+	}
+
+	private string GetEnumDisplayName(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.Name ?? value.ToString();
+	}
+
+	async Task DeleteFormat()
+	{
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this format?");
+		if (formatId != null && confirmed)
+		{
+			await FormatService.DeleteFormat((int)formatId);
+			NavigationManager.NavigateTo($"/products/{productSlug}");
+		}
+	}
+
+	private string CreateIDHash(int Id)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = minLength,
+			Alphabet = alphabet,
+		});
+		var hash = sqids.Encode(Id);
+		return hash;
+	}
+
+	private int DecodeHash(string hash)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = minLength,
+			Alphabet = alphabet,
+		});
+		var realId = sqids.Decode(hash).Single();
+		return realId;
+	}
+
+	async Task CancelEdit()
+	{
+		if (formatId == null)
+		{
+			NavigationManager.NavigateTo($"/products/{productSlug}");
+		}
+		else
+		{
+			NavigationManager.NavigateTo($"/products/{productSlug}/formats/{formatHash}");
+		}
+	}
+}
+

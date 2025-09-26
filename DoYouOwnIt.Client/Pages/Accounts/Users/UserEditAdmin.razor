@@ -1,0 +1,161 @@
+﻿@page "/users/{UserName}/admin"
+@attribute [Authorize(Roles = "Admin,Moderator")]
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<UserCustomize> Logger
+
+<AuthorizeView>
+	<Authorized>
+		@if (isLoading)
+		{
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		}
+		else if (!isAuthorized)
+		{
+			<p>You are not authorized to view this page.</p>
+		}
+	</Authorized>
+	<NotAuthorized>
+		<p>You are not authorized to view this page.</p>
+	</NotAuthorized>
+</AuthorizeView>
+@if (isAuthorized)
+{
+	@if(!isAdmin || (!isModerator && isAuthAdmin))
+	{
+		<h3>Edit User: @userPage.UserName</h3>
+		<p>Modify the user's profile information and ban status below. Changes will be reflected on their public profile.</p>
+		<EditForm Model="userPage" OnValidSubmit="HandleValidSubmit">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+			<div class="mb-3">
+				<label for="displayName" class="form-label>">Display Name</label>
+				<InputText id="displayName" class="form-control" @bind-Value="userPage.DisplayName" />
+				<ValidationMessage For="@(() => userPage.DisplayName)" />
+			</div>
+			<div>
+				<label for="websiteURL" class="form-label">Website</label>
+				<InputText id="websiteURL" class="form-control" @bind-Value="userPage.WebsiteURL" />
+				<ValidationMessage For="@(() => userPage.WebsiteURL)" />
+			</div>
+			<div class="mb-3">
+				<label for="bio" class="form-label>">Bio</label>
+				<InputTextArea id="bio" class="form-control" @bind-Value="userPage.Bio" />
+				<ValidationMessage For="@(() => userPage.Bio)" />
+			</div>
+			<div class="mb-3">
+				<label for="profileImageURL" class="form-label>">Profile Image URL</label>
+				<InputText id="profileImageURL" class="form-control" @bind-Value="userPage.ProfileImageURL" />
+				<ValidationMessage For="@(() => userPage.ProfileImageURL)" />
+			</div>
+			<div class="form-check mb-3">
+				<InputCheckbox id="isBanned" class="form-check-input" @bind-Value="userPage.IsBanned" />
+				<label for="isBanned" class="form-check-label">Is Banned</label>
+			</div>
+			@if (userPage.IsBanned)
+			{
+				<div class="mb-3">
+					<label for="banReason" class="form-label>">Ban Reason</label>
+					<InputTextArea id="banReason" class="form-control" @bind-Value="userPage.BanReason" />
+					<ValidationMessage For="@(() => userPage.BanReason)" />
+				</div>
+				<div class="mb-3">
+					<label for="banEndDate" class="form-label>">Ban End Date</label>
+					<InputDate id="banEndDate" class="form-control" @bind-Value="userPage.BanEndDate" />
+					<ValidationMessage For="@(() => userPage.BanEndDate)" />
+				</div>
+			}
+			<button type="submit" class="btn btn-primary mt-4">Submit</button>
+		</EditForm>
+	}
+	else
+	{
+		<p>You do not have permission to view this page.</p>
+	}
+}
+
+@code {
+	[Parameter]
+	public string? UserName { get; set; }
+
+	public string? CurrentUserName { get; set; }
+
+	/* Checks to see if the user page is an admin or moderator page*/
+	private bool isAdmin = false;
+	private bool isModerator = false;
+	/* Checks to see if the current user is an admin or moderator */
+	private bool isAuthorized = false;
+	private bool isAuthModerator = false;
+	private bool isAuthAdmin = false;
+	private bool isLoading = true;
+
+	private UserRequest userPage = new UserRequest();
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.IsNullOrWhiteSpace(UserName))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		else
+		{
+			try
+			{
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+
+				if (!user.Identity?.IsAuthenticated ?? true)
+				{
+					NavigationManager.NavigateTo("notfound");
+					return;
+				}
+				var currentUserRole = user.IsInRole("Admin") || user.IsInRole("Moderator");
+				isAuthorized = currentUserRole;
+
+				if (isAuthorized)
+				{
+					var result = await UserService.GetUserAsync(UserName);
+					if (result != null)
+					{
+						userPage.UserName = result.Value.UserName;
+						userPage.DisplayName = result.Value.DisplayName;
+						userPage.Bio = result.Value.Bio;
+						userPage.WebsiteURL = result.Value.WebsiteURL;
+						userPage.Email = result.Value.Email;
+						userPage.ProfileImageURL = result.Value.ProfileImageURL;
+						userPage.IsBanned = result.Value.IsBanned;
+						userPage.BanReason = result.Value.BanReason;
+						userPage.BanEndDate = result.Value.BanEndDate;
+					}
+					else
+					{
+						NavigationManager.NavigateTo("notfound");
+						return;
+					}
+
+					isAdmin = await UserService.IsUserInRole(userPage.UserName, "Admin");
+					isModerator = await UserService.IsUserInRole(userPage.UserName, "Moderator");
+				}
+
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error loading user data for {UserName}", UserName);
+				NavigationManager.NavigateTo("error");
+			}
+			finally
+			{
+				isLoading = false;
+			}
+		}
+	}
+	async Task HandleValidSubmit()
+	{
+		await UserService.UpdateUserAdminAsync(UserName!, userPage);
+		NavigationManager.NavigateTo($"/users/{UserName}");
+	}
+}

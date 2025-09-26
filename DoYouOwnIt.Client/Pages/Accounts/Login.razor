@@ -1,0 +1,62 @@
+﻿@page "/login"
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<h3>Login</h3>
+<EditForm Model="loginRequest" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+	<div>
+		<label for="username">Username:</label>
+		<InputText id="username" @bind-Value="loginRequest.Username" class="form-control"/>
+		<ValidationMessage For="() => loginRequest.Username" />
+	</div>
+	<div>
+		<label for="password">Password:</label>
+		<InputText id="password" type="password" @bind-Value="loginRequest.Password" class="form-control" />
+		<ValidationMessage For="() => loginRequest.Password" />
+	</div>
+	<button class="btn btn-primary mt-2" type="submit">Login</button>
+	</EditForm>
+
+@if (loginFailed)
+{
+	<div class="alert alert-danger mt-2">@errorMessage</div>
+}
+@if (loginSuccessful)
+{
+	<div class="alert alert-success mt-2">Login successful! You will be redirected to the home page.</div>
+}
+
+@code {
+	LoginRequest loginRequest = new LoginRequest();
+	bool loginFailed = false;
+	bool loginSuccessful = false;
+	string? errorMessage = string.Empty;
+
+	async Task HandleValidSubmit()
+	{
+		loginFailed = loginSuccessful = false;
+		errorMessage = string.Empty;
+
+		var response = await AuthService.Login(loginRequest);
+		loginSuccessful = response.Success;
+
+		if (!loginSuccessful && response.Error != null)
+		{
+			loginFailed = true;
+			errorMessage = response.Error;
+		}
+		else if (!loginSuccessful)
+		{
+			loginFailed = true;
+			errorMessage = "Login failed due to an Unexpected Error. Please try again.";
+		}
+		else
+		{
+			await Task.Delay(2000);
+			Navigation.NavigateTo("/");
+		}
+
+	}
+}

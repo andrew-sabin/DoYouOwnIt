@@ -1,0 +1,139 @@
+﻿@page "/stores/{Id:int}"
+@page "/stores/{Slug}"
+@using DoYouOwnIt.Client.Pages.Stores
+@inject HttpClient _http
+@inject IStoreService StoreService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+@if (store == null)
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb>-item"><a href="/stores">Stores</a></li>
+			<li class="breadcrumb-item active">Unknown</li>
+		</ol>
+	</nav>
+	<div class="spinner-border" role="status">
+		<span class="visually-hidden">Loading...</span>
+	</div>
+}
+else
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/stores">Stores</a></li>
+			<li class="breadcrumb-item active">@store.Name</li>
+		</ol>
+	</nav>
+	<div class="store-display-container">
+		@if (store.LogoURL == null || store.LogoURL == "")
+		{
+			<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg" 
+				 class="img-thumbnail" 
+				 style="max-width: min(300px, 100%); max-height: 300px;" 
+				 alt="Missing Image Picture Created By: Khanh Nguyen"/>
+		}
+		else
+		{
+			<img src="@store.LogoURL" style="max-width: min(300px, 100%); max-height: 300px;" class="img-thumbnail" />
+		}
+		<div class="store-details-column">
+			<h2>@store.Name</h2>
+			@if (store.Online == true)
+			{
+				<h3>Availability: <span class="badge badge-pill bg-success">Online Orders Available</span></h3>
+			}
+			else
+			{
+				<h3>Availability: <span class="badge badge-pill bg-danger">In-Store Orders Only</span></h3>
+			}
+			<h3>Location:</h3><p>@store.Street, @store.City, @store.State, @store.PostalCode, @store.Country</p>
+			@if (store.Phone != null)
+			{
+				<h3>Phone: <a href="tel:@store.Phone">@store.Phone</a></h3>
+			}
+			else
+			{
+				<h3>Phone: Not Provided</h3>
+			}
+			@if(store.WebsiteURL != null)
+			{
+				<h3>Website: <a href="@store.WebsiteURL" target="_blank">@store.WebsiteURL</a></h3>
+			}
+			else
+			{
+				<h3>Website: Not Provided</h3>
+			}
+			@if(store.Email != null)
+			{
+				<h3>Email: <a href="mailto:@store.Email">@store.Email</a></h3>
+			}
+			else
+			{
+				<h3>Email: Not Provided</h3>
+			}
+			<button class="btn btn-primary" onclick="@(() => NavigationManager.NavigateTo($"/stores/edit/{store.Slug}"))">
+				Edit Store
+			</button>
+		</div>
+	</div>
+	@if (Id != null || !string.IsNullOrEmpty(Slug))
+	{
+		<button class="btn btn-danger mt-4" @onclick="() => DeleteStore()">
+			Delete Store
+		</button>
+	}
+}
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	private StoreResponse? store = new StoreResponse();
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (Id == 0 && string.IsNullOrEmpty(Slug))
+		{
+			NavigationManager.NavigateTo("notfound");
+		}
+		else if (Id > 0)
+		{
+			var storeResponse = await StoreService.GetStoreByIdAsync((int)Id);
+			if (storeResponse == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+			}
+			store = storeResponse;
+		}
+		else if (!string.IsNullOrEmpty(Slug))
+		{
+			var storeResponse = await StoreService.GetStoreBySlugAsync(Slug);
+			if (storeResponse == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+			}
+			store = storeResponse;
+		}
+	}
+
+	protected async Task DeleteStore()
+	{
+		var confirm = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this store?");
+		var id = Id ?? store?.Id ?? 0;
+		if(id > 0 && confirm)
+		{
+			await StoreService.DeleteStoreAsync(id);
+			NavigationManager.NavigateTo("/stores");
+		}
+	}
+
+	private void EditStore(string slug)
+	{
+		NavigationManager.NavigateTo($"/stores/edit/{slug}");
+	}
+}

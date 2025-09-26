@@ -1,0 +1,131 @@
+﻿@inject HttpClient Http
+
+@if (FromProdList == true)
+{
+    @if (formats == null)
+    {
+        <p>Loading Formats...</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Format</th>
+                    <th>Edition</th>
+                    <th>Ownership Level </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var format in formats.Take(5))
+                {
+                    <tr>
+                        <td><a href="/products/@ProductId/formats/@CreateIDHash(format.Id)">@format.Type</a></td>
+                        <td><a href="/products/@ProductId/formats/@CreateIDHash(format.Id)">@format.Edition</a></td>
+                        <td>@GetEnumDisplayName(format.OwnershipLevel)</td>
+                        <td><a href="/products/@ProductId/formats/@CreateIDHash(format.Id)">Click for more details</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <a href="/products/@ProductId">Click here to see more available formats</a>
+    }
+}
+else
+{
+    @if (formats == null)
+    {
+        <p>Loading Formats...</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Format</th>
+                    <th>Edition</th>
+                    <th>Release Date</th>
+                    <th>Ownership Level </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var format in formats)
+                {
+                    <tr>
+                        <td>@format.Type</td>
+                        <td>@format.Edition</td>
+                        <td>@format.ReleaseDate</td>
+                        <td>@GetEnumDisplayName(format.OwnershipLevel)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+
+
+
+@code {
+    [Parameter]
+    public int? ProductId { get; set; }
+    [Parameter]
+    public bool FromProdList { get; set; } = false;
+
+	private List<FormatResponse>? formats = new List<FormatResponse>();
+
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (ProductId > 0)
+		{
+			await LoadFormats();
+		}
+	}
+
+	private async Task LoadFormats()
+	{
+        try
+        {
+            var response = await Http.GetAsync($"api/format/product/{ProductId}");
+
+            // Add this debug output
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"API Response: {responseContent}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                formats = await response.Content.ReadFromJsonAsync<List<FormatResponse>>();
+            }
+            else
+            {
+                Console.WriteLine($"Error: {response.StatusCode} - {responseContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+    private string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Name ?? value.ToString();
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            // Set in the appsettings json file
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+}
+

@@ -1,0 +1,240 @@
+﻿@page "/products/{productId:int}/formats/{formatId:int}"
+@page "/products/{productId:int}/formats/{HashedId}"
+@page "/products/{ProductSlug}/formats/{HashedId}"
+@inject IFormatService FormatService
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+@using DoYouOwnIt.Client.Pages.Availabilities
+
+
+@if(isLoading)
+{
+	@if(product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+		<div class="spinner-border" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/@ProductSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+		<div class="spinner-border" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+	}
+}
+else
+{
+	@if (product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">@format.Value.Type @format.Value.Edition</li>
+			</ol>
+		</nav>
+		<div class="spinner-border" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/@ProductSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">@format.Value.Type @format.Value.Edition</li>
+			</ol>
+		</nav>
+		<div class="product=display-container">
+			<div class="product-details-column">
+				<h1><a href="/products/@product.Value.Id">@product.Value.Name</a></h1>
+			</div>
+		</div>
+	}
+	<div class="format-display-container">
+		<div class="format-image-column">
+			@if (format.Value.CoverImageUrl == null || format.Value.CoverImageUrl == "")
+			{
+				<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+					 class="img-thumbnail"
+					 style="max-width: min(200px, 100%); max-height: 300px;"
+				alt="Missing Image Picture Created By: Khanh Nguyen" />
+			}
+			else
+			{
+				<img src="@format.Value.CoverImageUrl" 
+				style="max-width: min(300px, 100%); max-height: 300px;" 
+				class="img-thumbnail" />
+			}
+		</div>
+		
+
+		<div class="format-details-column">
+			<h2>@format.Value.Type : @format.Value.Edition</h2>
+			<h3>Ownership: @GetEnumDisplayName(format.Value.OwnershipLevel)</h3>
+			<h3>Release Date: @format.Value.ReleaseDate</h3>
+			@if (format.Value.IsAIAssisted)
+			{
+				<h3>Format is AI Assisted</h3>
+				<p>@format.Value.AIAssistsWith</p>
+			}
+			<div class="format-user-info">
+				@if (format.Value.CreatorId != null)
+				{
+					<DisplayUserInfo UserId="@format.Value.CreatorId" />
+				}
+				<h4>Last Modified: @format.Value.LastModified.ToString("yyyy-MM-dd")</h4>
+				@if (format.Value.ModifierId != null)
+				{
+					<h4>Last Edited By:</h4>
+					<DisplayUserInfo UserId="@format.Value.ModifierId" />
+				}
+			</div>
+			<div class="format-edit-button">
+				<button class="btn btn-primary" onclick="@(() => EditHashedFormat(@CreateIDHash(formatId)))">
+					Edit Format
+				</button>
+			</div>
+			<hr />
+			<ListAvailabilities FormatId="formatId" />
+			<hr />
+			<div class="format-review-column">
+				<h3>Format Information:</h3>
+				<hr />
+				@((MarkupString)format.Value.Description)
+			</div>
+		</div>
+	</div>
+}
+@code {
+	[Parameter]
+	public int formatId { get; set; }
+	[Parameter]
+	public int productId { get; set; }
+	[Parameter]
+	public string? ProductSlug { get; set; }
+	[Parameter]
+	public string? HashedId { get; set; }
+
+	[Inject]
+	public IConfiguration Configuration { get; set; }
+
+	private int minLength { get; set; }
+	private string alphabet { get; set; } = string.Empty;
+
+	private bool isLoading = true;
+
+	private FormatResponse? format = new FormatResponse();
+	private ProductResponseNoCategory? product = new();
+
+	private string? ownershipInformation { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		minLength = Configuration.GetValue<int>("Sqids:MinLength");
+		alphabet = Configuration["Sqids:Alphabet"];
+
+		if (HashedId != null)
+		{
+			var Id = DecodeHash(HashedId);
+			formatId = Id;
+		}
+		var result = await FormatService.GetFormatByID(formatId);
+		if (result == null)
+		{
+			NavigationManager.NavigateTo("notfound");
+		}
+		else
+		{
+			format = result;
+			product = result.Value.Product;
+			ownershipInformation = GetEnumDisplayDescription(format.Value.OwnershipLevel);
+		}
+		isLoading = false;
+	}
+
+	private string GetEnumDisplayName(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.Name ?? value.ToString();
+	}
+
+	private string GetEnumDisplayDescription(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.Description ?? value.ToString();
+	}
+
+	private string CreateIDHash(int Id)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = minLength,
+			Alphabet = alphabet,
+		});
+		var hash = sqids.Encode(Id);
+		return hash;
+	}
+
+	private int DecodeHash(string hash)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = minLength,
+			Alphabet = alphabet,
+		});
+		var realId = sqids.Decode(hash).Single();
+		return realId;
+	}
+
+	private async Task<string> GetUserProfile(string userId)
+	{
+		var user = await UserService.GetUserByIdAsync(userId);
+		if (user == null)
+		{
+			return "Unknown User";
+		}
+		else
+		{
+			var userName = user.Value.UserName;
+			return userName;
+		}
+	}
+
+	private void CreateFormat()
+	{
+		NavigationManager.NavigateTo($"/products/{ProductSlug}/formats/create");
+	}
+
+	private void EditFormat(int id)
+	{
+		NavigationManager.NavigateTo($"/products/{ProductSlug}/formats/{formatId}/edit");
+	}
+
+	private void EditHashedFormat(string hashedId)
+	{
+		NavigationManager.NavigateTo($"/products/{ProductSlug}/formats/{hashedId}/edit");
+	}
+
+}

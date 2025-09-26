@@ -1,0 +1,24 @@
+﻿@page "/gallery"
+@using DoYouOwnIt.Client.Shared
+
+<PageTitle>Test Gallery</PageTitle>
+
+<LightboxDisplay @ref="lightboxDisplay" ImageUrls="images" ImageAlts="imageCaptions" ShowNavigation="true" ShowCounter="true" />
+
+@code {
+	private LightboxDisplay lightboxDisplay = new LightboxDisplay();
+	private List<string> images = new List<string>
+	{
+		"https://cdn.mobygames.com/screenshots/10830926-team-fortress-2-windows-main-menu.jpg",
+		"https://images.gamewatcherstatic.com/screenshot/image/9/e7/168559/00214784.jpg",
+		"https://images.gamewatcherstatic.com/screenshot/image/7/78/168587/00214786.jpg",
+		"https://cdn.mobygames.com/screenshots/11358796-team-fortress-2-windows-the-august-13-2009-upgrade-included-a-ne.jpg"
+	};
+	private List<string> imageCaptions = new List<string>
+	{
+		"Team Fortress 2 Main Menu Circa 2007",
+		"BLU Team Scout firing his Scattergun and Heavy Weapons Guy Revving Up his Minigun",
+		"RED Team Sniper, Medic, and Sniper running out onto the powerplant battle field.",
+		"Team Fortress 2 August 13, 2009 BLU Team Menu"
+	};
+}

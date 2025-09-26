@@ -1,0 +1,106 @@
+﻿@page "/categories/edit/{Id:int}"
+@page "/categories/edit/{Slug}"
+@page "/categories/create"
+@inject IProductCategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles ="Admin")]
+@* @implements IDisposable *@
+
+@if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+{
+	<h3>Edit Category</h3>
+}
+else
+{
+	<h3>Create New Category</h3>
+}
+
+<EditForm Model="category" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<div class="mb-3">
+		<label for="categoryName" class="form-label">Category Name</label>
+		<InputText id="categoryName" class="form-control" @bind-Value="category.Category" />
+		<ValidationMessage For="@(() => category.Category)" />
+	</div>
+	@if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+	{
+		<div class="mb-3">
+			<label for="categorySlug" class="form-label">Slug</label>
+			<InputText id="categorySlug" class="form-control" @bind-Value="category.Slug" />
+			<ValidationMessage For="@(() => category.Slug)" />
+		</div>
+	}
+	<div class="mb-3">
+		<label for="categoryDescription" class="form-label">Description</label>
+		<InputTextArea id="categoryDescription" class="form-control" @bind-Value="category.Description" />
+		<ValidationMessage For="@(() => category.Description)" />
+	</div>
+	<button type="submit" class="btn btn-primary mt-4">Submit</button>
+</EditForm>
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	ProductCategoryRequest category = new ProductCategoryRequest();
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if(Id != null)
+		{
+			var response = await CategoryService.GetProductCategoryById(Id.Value);
+			if(response != null)
+			{
+				category = new ProductCategoryRequest
+				{
+					Category = response.Category,
+					Description = response.Description,
+					Slug = response.Slug
+				};
+			}
+			else
+			{
+				Console.WriteLine($"Category with Id {Id} not found.");
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+		else if(Slug != null && Slug != "")
+		{
+			var response = await CategoryService.GetProductCategoryBySlug(Slug);
+			if(response != null)
+			{
+				category = new ProductCategoryRequest
+				{
+					Id = response.Id,
+					Category = response.Category,
+					Description = response.Description,
+					Slug = response.Slug
+				};
+			}
+			else
+			{
+				Console.WriteLine($"Category with Slug '{Slug}' not found.");
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		if (Id == null && String.IsNullOrWhiteSpace(Slug))
+		{
+			await CategoryService.CreateProductCategory(category);
+			Console.WriteLine($"Creating a new Category {category.Category}.");
+		}
+		else if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+		{
+			await CategoryService.UpdateProductCategoryByID(category.Id, category);
+			Console.WriteLine($"Updated Category {category.Category} with Id {Id}.");
+		}
+		await JSRuntime.InvokeVoidAsync("alert", "Category saved successfully!");
+		NavigationManager.NavigateTo("/categories");
+	}
+}

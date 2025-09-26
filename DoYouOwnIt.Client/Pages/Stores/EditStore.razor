@@ -1,0 +1,185 @@
+﻿@page "/stores/edit/{Id:int}"
+@page "/stores/edit/{Slug}"
+@page "/stores/create"
+@inject IStoreService StoreService
+@inject NavigationManager NavigationManager
+@attribute [Authorize (Roles ="Admin, Moderator")]
+
+@if(Id != null || !String.IsNullOrWhiteSpace(Slug))
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/stores">Stores</a></li>
+			<li class="breadcrumb-item active"><a href="/stores/@store.Slug">@store.Name</a></li>
+			<li class="breadcrumb-item active">Editing Store</li>
+		</ol>
+	</nav>
+	<h3>Edit Store Information</h3>
+}
+else
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/stores">Stores</a></li>
+			<li class="breadcrumb-item active">New Store</li>
+		</ol>
+	</nav>
+	<h3>Create New Store</h3>
+}
+
+<EditForm Model="store" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<div class="mb-3">
+		<label for="storeName">Store Name</label>
+		<InputText id="storeName" class="form-control" @bind-Value="store.Name" />
+		<ValidationMessage For="@(() => store.Name)" />
+	</div>
+	@if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+	{
+		<div class="mb-3">
+			<label for="storeSlug">Slug</label>
+		<InputText id="storeSlug" class="form-control" @bind-Value="store.Slug" />
+			<ValidationMessage For="@(() => store.Slug)" />
+		</div>
+	}
+	<div class="mb-3">
+		<label for="storeLogo">Store Logo URL</label>
+		<InputText id="storeLogo" class="form-control" @bind-Value="store.LogoURL" />
+		<ValidationMessage For="@(() => store.LogoURL)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeOnline">Online Orders Available</label>
+		<InputCheckbox id="storeOnline" class="form-check-input" @bind-Value="store.Online" />
+		<ValidationMessage For="@(() => store.Online)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeIndustry">Store Industry</label>
+		<InputText id="storeIndustry" class="form-control" @bind-Value="store.Industry" />
+		<ValidationMessage For="@(() => store.Industry)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeStreet">Street Address</label>
+		<InputText id="storeStreet" class="form-control" @bind-Value="store.Street" />
+		<ValidationMessage For="@(() => store.Street)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeCity">City</label>
+		<InputText id="storeCity" class="form-control" @bind-Value="store.City" />
+		<ValidationMessage For="@(() => store.City)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeState">State</label>
+		<InputText id="storeState" class="form-control" @bind-Value="store.State" />
+		<ValidationMessage For="@(() => store.State)" />
+	</div>
+	<div class="mb-3">
+		<label for="storePostalCode">Postal Code</label>
+		<InputText id="storePostalCode" class="form-control" @bind-Value="store.PostalCode" />
+		<ValidationMessage For="@(() => store.PostalCode)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeCountry">Country</label>
+		<InputText id="storeCountry" class="form-control" @bind-Value="store.Country" />
+		<ValidationMessage For="@(() => store.Country)" />
+	</div>
+	<div class="mb-3">
+		<label for="storePhone">Phone Number</label>
+		<InputText id="storePhone" class="form-control" @bind-Value="store.Phone" />
+		<ValidationMessage For="@(() => store.Phone)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeEmail">Email Address</label>
+		<InputText id="storeEmail" class="form-control" @bind-Value="store.Email" />
+		<ValidationMessage For="@(() => store.Email)" />
+	</div>
+	<div class="mb-3">
+		<label for="storeWebsite">Website URL</label>
+		<InputText id="storeWebsite" class="form-control" @bind-Value="store.WebsiteURL" />
+		<ValidationMessage For="@(() => store.WebsiteURL)" />
+	</div>
+	<button type="submit" class="btn btn-primary mt-4">Submit</button>
+	<button type="button" class="btn btn-secondary mt-4 mx-2" @onclick="CancelEdit">Cancel</button>
+</EditForm>
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	StoreRequest store = new StoreRequest();
+	protected override async Task OnParametersSetAsync()
+	{
+		if (Id != null)
+		{
+			var response = await StoreService.GetStoreByIdAsync(Id.Value);
+			if (response != null)
+			{
+				store = new StoreRequest
+				{
+					Id = response.Id,
+					Name = response.Name,
+					Slug = response.Slug,
+					LogoURL = response.LogoURL,
+					Online = response.Online,
+					Street = response.Street,
+					City = response.City,
+					State = response.State,
+					PostalCode = response.PostalCode,
+					Country = response.Country,
+					Phone = response.Phone,
+					WebsiteURL = response.WebsiteURL
+				};
+			}
+		}
+		else if (!string.IsNullOrWhiteSpace(Slug))
+		{
+			var response = await StoreService.GetStoreBySlugAsync(Slug);
+			if (response != null)
+			{
+				store = new StoreRequest
+				{
+					Id = response.Id,
+					Name = response.Name,
+					Slug = response.Slug,
+					LogoURL = response.LogoURL,
+					Online = response.Online,
+					Street = response.Street,
+					City = response.City,
+					State = response.State,
+					PostalCode = response.PostalCode,
+					Country = response.Country,
+					Phone = response.Phone,
+					WebsiteURL = response.WebsiteURL
+				};
+			}
+		}
+	}
+	private async Task HandleValidSubmit()
+	{
+		if (Id != null || !string.IsNullOrWhiteSpace(Slug))
+		{
+			await StoreService.UpdateStoreAsync((int) store.Id, store);
+			Console.WriteLine($"Updating Store with ID {store.Id}");
+			NavigationManager.NavigateTo($"/stores/{store.Slug}");
+		}
+		else
+		{
+			await StoreService.CreateStoreAsync(store);
+			Console.WriteLine($"Creating a new Store: {store.Name}");
+			NavigationManager.NavigateTo($"/stores/{store.Slug}");
+		}
+	}
+
+	async Task CancelEdit()
+	{
+		if(Id != null || !string.IsNullOrWhiteSpace(Slug))
+		{
+			NavigationManager.NavigateTo($"/stores/{store.Slug}");
+		}
+		else
+		{
+			NavigationManager.NavigateTo($"/stores");
+		}
+	}
+}

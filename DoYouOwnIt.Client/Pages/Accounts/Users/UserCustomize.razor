@@ -1,0 +1,134 @@
+﻿@page "/users/{UserName}/customize"
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<UserCustomize> Logger
+@attribute [Authorize]
+
+
+<AuthorizeView>
+	<Authorized>
+		@if (isLoading)
+		{
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		}
+		else if (isAuthorized)
+		{
+			<h3>User Customization Options</h3>
+		}
+		else if(!isAuthorized)
+		{
+			<p>You are not authorized to view this page.</p>
+		}
+	</Authorized>
+	<NotAuthorized>
+		<p>You are not authorized to view this page.</p>
+	</NotAuthorized>
+</AuthorizeView>
+@if (isAuthorized)
+{
+	<p>Customize your profile information below. Changes will be reflected on your public profile.</p>
+	<EditForm Model="customization" OnValidSubmit="HandleValidSubmit">
+		<DataAnnotationsValidator />
+		<div class="mb-3">
+			<label for="displayName" class="form-label>">Display Name</label>
+			<InputText id="displayName" class="form-control" @bind-Value="customization.DisplayName" />
+			<ValidationMessage For="@(() => customization.DisplayName)" />
+		</div>
+		<div class="mb-3">
+			<label for="email" class="form-label>">Email</label>
+			<InputText id="email" type="email" class="form-control" @bind-Value="customization.Email" />
+			<ValidationMessage For="@(() => customization.Email)" />
+		</div>
+		<div>
+			<label for="websiteURL" class="form-label>">Website URL</label>
+			<InputText id="websiteURL" class="form-control" @bind-Value="customization.WebsiteURL" />
+			<ValidationMessage For="@(() => customization.WebsiteURL)" />
+		</div>
+		<div class="mb-3">
+			<label for="bio" class="form-label>">Bio</label>
+			<InputTextArea id="bio" class="form-control" @bind-Value="customization.Bio" />
+			<ValidationMessage For="@(() => customization.Bio)" />
+		</div>
+		<div class="mb-3">
+			<label for="profileImageURL" class="form-label>">Profile Image URL</label>
+			<InputText id="profileImageURL" class="form-control" @bind-Value="customization.ProfileImageURL" />
+			<ValidationMessage For="@(() => customization.ProfileImageURL)" />
+		</div>
+		<button type="submit" class="btn btn-primary mt-4">Submit</button>
+	</EditForm>
+}
+
+
+@code {
+	[Parameter]
+	public string? UserName { get; set; }
+
+	private bool isAuthorized = false;
+	private bool isLoading = true;
+
+	UserRequest customization = new UserRequest();
+
+	protected override async Task OnParametersSetAsync()
+	{
+
+
+		if (string.IsNullOrWhiteSpace(UserName))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		else
+		{
+			try
+			{
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+
+				if (!user.Identity?.IsAuthenticated ?? true)
+				{
+					NavigationManager.NavigateTo("notfound");
+					return;
+				}
+				var currentUserName = user.Identity.Name;
+				isAuthorized = string.Equals(currentUserName, UserName, StringComparison.OrdinalIgnoreCase);
+				if (isAuthorized)
+				{
+					var result = await UserService.GetUserAsync(UserName);
+					if (result != null)
+					{
+						customization.DisplayName = result.Value.DisplayName;
+						customization.Bio = result.Value.Bio;
+						customization.Email = result.Value.Email;
+						customization.WebsiteURL = result.Value.WebsiteURL;
+						customization.ProfileImageURL = result.Value.ProfileImageURL;
+					}
+					else
+					{
+						NavigationManager.NavigateTo("notfound");
+						return;
+					}
+				}
+			} 
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error during authorization check for user {UserName}", UserName);
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			finally
+			{
+				isLoading = false;
+			}
+
+		}
+	}
+	async Task HandleValidSubmit()
+	{
+		await UserService.UpdateUserAsync(UserName!, customization);
+		NavigationManager.NavigateTo($"/users/{UserName}");
+	}
+
+}

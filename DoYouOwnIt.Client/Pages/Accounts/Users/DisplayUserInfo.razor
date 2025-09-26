@@ -1,0 +1,78 @@
+﻿@using Microsoft.Extensions.Logging
+@inject NavigationManager NavigationManager
+@inject ILogger<UserCustomize> Logger
+@inject IUserService UserService
+@attribute [AllowAnonymous]
+
+@if (isLoading)
+{
+	<div class="user-image">
+			<img src="..." alt="Profile loading" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
+	</div>
+	<div class="user-information">
+		<h4><span class="placeholder col-6"></span></h4>
+	</div>
+}
+else if (hasError || userResponse == null)
+{
+	<p>User Profile Not Found</p>
+}
+else
+{
+	<div class="user-image">
+		@if (!String.IsNullOrEmpty(userResponse!.Value.ProfileImageURL))
+		{
+			<img src="@userResponse!.Value.ProfileImageURL" alt="Profile Image" class="rounded-circle" style="max-width: 50px; max-height: 50px;" />
+		}
+		else
+		{
+			<img src="/images/placeholder/default-profile.png" alt="Default Profile Image" class="rounded-circle" style="max-width: 50px; max-height: 50px;" />
+		}
+	</div>
+	<div class="user-information">
+		@if (!String.IsNullOrEmpty(userResponse!.Value.DisplayName))
+		{
+			<h4><a href="/users/@userResponse.Value.UserName">@userResponse!.Value.DisplayName</a></h4>
+		}
+		else
+		{
+			<h4><a href="/users/@userResponse.Value.UserName">@userResponse!.Value.UserName</a></h4>
+		}
+	</div>
+}
+
+@code {
+	[Parameter]
+	public string? UserId { get; set; }
+
+	private bool isLoading = true;
+	private bool hasError = false;
+
+	private UserResponse? userResponse = new UserResponse();
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.IsNullOrWhiteSpace(UserId))
+		{
+			hasError = true;
+		}
+		else
+		{
+			try
+			{
+				userResponse = await UserService.GetUserByIdAsync(UserId);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error during authorization check for user {UserId}", UserId);
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			finally
+			{
+				isLoading = false;
+			}
+		}
+	}
+
+}

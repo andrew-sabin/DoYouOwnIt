@@ -1,0 +1,14 @@
+﻿@page "/search-results"
+<h3>SearchResults</h3>
+
+<h2>Product Title: @ProductName</h2>
+
+<h2>Product CategoryID: @CategoryID</h2>
+
+@code {
+	[SupplyParameterFromQuery(Name ="title")]
+	private string? ProductName { get; set; }
+
+	[SupplyParameterFromQuery (Name = "category")]
+	private int? CategoryID { get; set; }
+}

@@ -1,0 +1,40 @@
+﻿@inject HttpClient Http
+@inject IProductService ProductService
+@inject IProductCategoryService CategoryService
+@implements IDisposable
+
+<div class="form-group my-4">
+	<InputSelect @bind-Value="selectedCategoryId" @oninput="OnInput" class="form-control">
+		<option value="0">All Categories</option>
+		@foreach (var category in CategoryService.ProductCategories)
+		{
+			<option value="@category.Id">@category.Category</option>
+		}
+	</InputSelect>
+</div>
+
+@code {
+	private int selectedCategoryId;
+
+	protected override void OnInitialized()
+	{
+		CategoryService.OnChange += StateHasChanged;
+	}
+
+	private async Task OnInput(ChangeEventArgs e)
+	{
+		if (e.Value !=null)
+		{
+			if(int.TryParse(e.Value.ToString(), out var categoryId))
+			{
+				await ProductService.GetProductsByCategoryId(categoryId);
+			}
+		}
+	}
+
+	public void Dispose()
+	{
+		// Unsubscribe from the event to prevent memory leaks
+		CategoryService.OnChange -= StateHasChanged;
+	}
+}
