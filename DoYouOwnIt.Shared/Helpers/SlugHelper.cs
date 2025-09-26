@@ -77,11 +77,7 @@ namespace DoYouOwnIt.Shared.Helpers
 
         public static string GenerateIdHash (int Id)
         {
-            var sqids = new SqidsEncoder<int>(new()
-            {
-                // Located in the configuration file
-            });
-            var hash = sqids.Encode(Id);
+            // Generates IDHash Here
             return hash;
         }
 
