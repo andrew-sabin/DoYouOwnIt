@@ -4,7 +4,9 @@ Public repository for a web application where users can give information or revi
 ## Adding up the finishing touches before doing closed alpha testing
 Will be doing closed alpha testing in the near future.
 
-## Video Demonstration (Click To Watch)
+## Video Demonstrations (Click To Watch)
+[Locking and Unlocking Update](https://www.youtube.com/watch?v=hiCexUTgfUs)
+
 [![Watch the video](https://img.youtube.com/vi/6sKoSNBbu8w/maxresdefault.jpg)](https://www.youtube.com/watch?v=6sKoSNBbu8w)
 
 
