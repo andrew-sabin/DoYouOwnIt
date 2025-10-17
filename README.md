@@ -11,7 +11,7 @@ Will be doing closed alpha testing in the near future.
 ## Video Demonstrations (Click To Watch)
 [Locking and Unlocking Update](https://www.youtube.com/watch?v=hiCexUTgfUs)
 
-[![Do You Own It Project Demonstration](https://www.youtube.com/watch?v=6sKoSNBbu8w)
+[Do You Own It Project Demonstration](https://www.youtube.com/watch?v=6sKoSNBbu8w)
 
 
 ## Note
