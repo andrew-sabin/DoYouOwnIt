@@ -1,0 +1,105 @@
+﻿@page "/products/view/{ProductSlug}/formats/{formatHashedId}/revisions"
+@inject IFormatService FormatService
+@inject IFormatRevisionService FormatRevisionService
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin, Moderator")]
+
+
+<QuickGrid Items="queryableFormats" Pagination="@pagination">
+    <PropertyColumn Property="r => r.RevisionNumber" Title="Revision Number" />
+    <PropertyColumn Property="r => r.ModifiedDate" Title="Date Modified" InitialSortDirection="SortDirection.Descending" Sortable="true" />
+    <TemplateColumn Title="Revision">
+        <ChildContent Context="r">
+            <p>
+                <strong>
+                    <a href="/products/view/@ProductSlug/formats/@formatHashedId/revisions/view/@CreateIDHash(r.Id)">
+                        @CreateIDHash(r.Id)
+                    </a>
+                </strong>
+            </p>
+        </ChildContent>
+    </TemplateColumn>
+    <PropertyColumn Property=" r => r.ModifierName" Title="Modifier"/>
+    <TemplateColumn Title="Previous Revision">
+        <ChildContent Context="r">
+            @if (r.PreviousRevisionId != null)
+            {
+                <p><strong>
+                        <a href="/products/view/@ProductSlug/formats/@formatHashedId/revisions/view/@CreateIDHash((int)r.PreviousRevisionId)">
+                            @CreateIDHash((int)r.PreviousRevisionId)</a>
+                </strong></p>
+            }
+            else
+            {
+                <p><strong>No Previous Revision</strong></p>
+            }
+        </ChildContent>
+    </TemplateColumn>
+</QuickGrid>
+
+<Paginator State ="@pagination" />
+
+@code {
+    [Parameter]
+    public required string formatHashedId { get; set; }
+    [Parameter]
+    public string? ProductSlug { get; set; }
+
+    private int formatId { get; set; }
+    private FormatResponse format{ get; set; }
+
+    private int revisionAmount { get; set; }
+
+    private List<FormatRevisionResponse>? formatRevisions = new List<FormatRevisionResponse>();
+
+    private IQueryable<FormatRevisionResponse>? queryableFormats;
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 20 };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(ProductSlug))
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(formatHashedId))
+            {
+                formatId = DecodeHash(formatHashedId);
+                var result = await FormatService.GetFormatByID(formatId);
+                if (result == null)
+                {
+                    NavigationManager.NavigateTo("notfound");
+                }
+                else
+                {
+                    await LoadFormatRevisions(formatId);
+                }
+            }
+        }
+        
+    }
+
+    private async Task LoadFormatRevisions(int id)
+    {
+        try
+        {
+            var response = await FormatRevisionService.GetRevisionsByFormatId(id);
+
+            if (response == null || response.Count <= 0)
+            {
+                revisionAmount = 0;
+            }
+            else
+            {
+                formatRevisions = response;
+                queryableFormats = formatRevisions.AsQueryable();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading revisions: {ex.Message}");
+        }
+    }
+}

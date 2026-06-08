@@ -1,0 +1,246 @@
+is_global = true
+build_property.EnableAotAnalyzer = 
+build_property.EnableSingleFileAnalyzer = 
+build_property.EnableTrimAnalyzer = false
+build_property.IncludeAllContentForSelfExtract = 
+build_property.VerifyReferenceTrimCompatibility = 
+build_property.VerifyReferenceAotCompatibility = 
+build_property.TargetFramework = net10.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v10.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = false
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property.EntryPointFilePath = 
+build_property._SupportedPlatformList = browser
+build_property.RootNamespace = GoMontag.Client
+build_property.RootNamespace = GoMontag.Client
+build_property.ProjectDir = C:\Users\herel\Downloads\GoMontag_Site-master(1)\GoMontag_Site-master\GoMontag.Client\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = false
+build_property.RazorLangVersion = 10.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\herel\Downloads\GoMontag_Site-master(1)\GoMontag_Site-master\GoMontag.Client
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 10.0
+build_property.EnableCodeStyleSeverity = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Logout.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcTG9nb3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Users/UpdateRole.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcVXNlcnNcVXBkYXRlUm9sZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Availabilities/EditAvailability.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXZhaWxhYmlsaXRpZXNcRWRpdEF2YWlsYWJpbGl0eS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Categories/CategoryList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2F0ZWdvcmllc1xDYXRlZ29yeUxpc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Categories/EditCategory.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2F0ZWdvcmllc1xFZGl0Q2F0ZWdvcnkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Categories/LockCategory.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2F0ZWdvcmllc1xMb2NrQ2F0ZWdvcnkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Formats/EditFormat.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0c1xFZGl0Rm9ybWF0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Formats/LockFormat.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0c1xMb2NrRm9ybWF0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Formats/Revisions/RevisionsList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0c1xSZXZpc2lvbnNcUmV2aXNpb25zTGlzdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/FormatTypes/EditFormatType.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0VHlwZXNcRWRpdEZvcm1hdFR5cGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/FormatTypes/FormatTypeList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0VHlwZXNcRm9ybWF0VHlwZUxpc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/NewsBlogs/EditArticle.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTmV3c0Jsb2dzXEVkaXRBcnRpY2xlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/OwnershipExplanation.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcT3duZXJzaGlwRXhwbGFuYXRpb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Products/EditProduct.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcRWRpdFByb2R1Y3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Products/LockProduct.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcTG9ja1Byb2R1Y3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Stores/EditStore.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3RvcmVzXEVkaXRTdG9yZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Stores/StoreDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3RvcmVzXFN0b3JlRGlzcGxheS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/CategorySelect.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXENhdGVnb3J5U2VsZWN0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/HTMLContentViewer.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEhUTUxDb250ZW50Vmlld2VyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/RichTextEditor.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFJpY2hUZXh0RWRpdG9yLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Layout/AdminNavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XEFkbWluTmF2TWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-p98q3r09aa
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-9rzpg9r5jo
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Confirm-Email.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcQ29uZmlybS1FbWFpbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-wpekx0y9gp
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/ForgotPassword.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcRm9yZ290UGFzc3dvcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-eh3xzqc0hp
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcTG9naW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-po1icxlzb4
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Register.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcUmVnaXN0ZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-c66g0oezg7
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/ResetPassword.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcUmVzZXRQYXNzd29yZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-rxiejowuhw
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Users/DisplayUserInfo.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcVXNlcnNcRGlzcGxheVVzZXJJbmZvLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-rla01sb8jq
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Users/ShowUser.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcVXNlcnNcU2hvd1VzZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-75lw6citld
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Users/UserCustomize.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcVXNlcnNcVXNlckN1c3RvbWl6ZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-lekx1g0sgq
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Accounts/Users/UserEditAdmin.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHNcVXNlcnNcVXNlckVkaXRBZG1pbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-t98mmtlte2
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Attributions.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXR0cmlidXRpb25zLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-y3g94dnqha
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Availabilities/ListAvailabilities.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXZhaWxhYmlsaXRpZXNcTGlzdEF2YWlsYWJpbGl0aWVzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-uf79twcv3r
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Contact.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29udGFjdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-7j4i6045ok
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Formats/FormatsPerProduct.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0c1xGb3JtYXRzUGVyUHJvZHVjdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-chmofsyf10
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Formats/Revisions/RevisionCompare.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0c1xSZXZpc2lvbnNcUmV2aXNpb25Db21wYXJlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-5e8y5k15py
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Formats/ShowFormat.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRm9ybWF0c1xTaG93Rm9ybWF0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-cf89sri371
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Home.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSG9tZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-n3oaczl4ts
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/NewsBlogs/DisplayArticle.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTmV3c0Jsb2dzXERpc3BsYXlBcnRpY2xlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-1wwrdeey9n
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/NewsBlogs/NewsArticleList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTmV3c0Jsb2dzXE5ld3NBcnRpY2xlTGlzdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-up2as3ng9y
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Products/FormatsList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcRm9ybWF0c0xpc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-x2rxg80klj
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Products/Products.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcUHJvZHVjdHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-ze8n4m85lc
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Products/ShowProduct.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJvZHVjdHNcU2hvd1Byb2R1Y3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-6z6vjilxyu
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Replacements/About.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwbGFjZW1lbnRzXEFib3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-61ldn72ovl
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Replacements/Rules.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUmVwbGFjZW1lbnRzXFJ1bGVzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-z2677cmvbv
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/Stores/ListStores.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3RvcmVzXExpc3RTdG9yZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-2uk6hfee78
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Pages/TakeBackYourInternet.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGFrZUJhY2tZb3VySW50ZXJuZXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-q0umdfbxsu
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/FormatHomePageCards.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEZvcm1hdEhvbWVQYWdlQ2FyZHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-jz1g4ba1i0
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/HomePageCards.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEhvbWVQYWdlQ2FyZHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-kxe58chffc
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/Lightbox.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXExpZ2h0Ym94LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-vushp6u62w
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/LoginDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXExvZ2luRGlzcGxheS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-dq6sorpgj8
+
+[C:/Users/herel/Downloads/GoMontag_Site-master(1)/GoMontag_Site-master/GoMontag.Client/Shared/Search.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFNlYXJjaC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-8j3icf0sd9

@@ -1,0 +1,120 @@
+﻿@page "/categories"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthService AuthService
+@attribute [Authorize (Roles ="Admin")]
+
+
+<PageTitle>DoYouOwnIt: Categories Admin</PageTitle>
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item active">Categories</li>
+    </ol>
+</nav>
+
+<button class="btn btn-primary" mb-2 @onclick="CreateCategory">
+    Create Category
+</button>
+@if (categories == null || !categories.Any())
+{
+    <p>Loading Categories...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Locked</th>
+                <th>Category Name</th>
+                <th>Slug</th>
+                <th>Description</th>
+                <th>Creators Title</th>
+                <th>Formats Title</th>
+                <th>Type Title</th>
+                <th>Edition Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var category in categories)
+            {
+                <tr>
+                    @if(!category.IsLocked)
+                    {
+                        <td><span class="badge bg-success">Unlocked</span></td>
+                    }
+                    else
+                    {
+                        <td><span class="badge bg-danger">Locked</span></td>
+                    }
+                    <td><a href="categories/edit/@category.Slug">@category.Name</a></td>
+                    <td><a href="categories/edit/@category.Slug">@category.Slug</a></td>
+                    <td><a href="categories/edit/@category.Slug">@category.Description</a></td>
+                    <td><a href="categories/edit/@category.Slug">@category.CreatorsTitle</a></td>
+                    <td><a href="categories/edit/@category.Slug">@category.FormatsTitle</a></td>
+                    <td><a href="categories/edit/@category.Slug">@category.TypeTitle</a></td>
+                    <td><a href="categories/edit/@category.Slug">@category.EditionTitle</a></td>
+                    @if (!category.IsLocked)
+                    {
+                        <td>
+                            <button class="btn btn-primary" onclick="@(() => LockCategory(category.Slug))">
+                                Lock Category
+                            </button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td>
+                            <button class="btn btn-primary" onclick="@(() => LockCategory(category.Slug))">
+                                Unlock Category
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+
+
+@code {
+
+    private List<CategoryResponse>? categories = new List<CategoryResponse>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.EnsureTokenValidAsync();
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/Category");
+            if (response.IsSuccessStatusCode)
+            {
+                categories = await response.Content.ReadFromJsonAsync<List<CategoryResponse>>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading categories: {ex.Message}");
+        }
+    }
+
+    private void CreateCategory()
+    {
+        NavigationManager.NavigateTo("/categories/create");
+    }
+
+    private void LockCategory(string slug)
+    {
+        NavigationManager.NavigateTo($"/categories/lock/{slug}");
+    }
+}
+

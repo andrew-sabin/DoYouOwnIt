@@ -1,0 +1,227 @@
+﻿@using Blazorise
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject IAvailabilityService AvailabilityService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+
+<hr />
+@if (isLoading)
+{
+    <p><strong>Loading In Available Stores Please Wait...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}else{
+    @if(totalAvailabilities == 0)
+    {
+    <div class="availabilities-container">
+        <h3>Currently No Listed Available Places to Purchase this Format.</h3>
+        <AuthorizeView Roles="Admin, Moderator" Context="authState">
+            <Authorized>
+                <button class="btn btn-primary" mb-2 @onclick="CreateAvailability">
+                    Create Availability
+                </button>
+            </Authorized>
+        </AuthorizeView>
+        <br />
+        </div>
+    }
+    else
+    {
+    <div class="availabilities-container">
+        <h3>Available Places for Purchase</h3>
+        <AuthorizeView Roles="Admin, Moderator" Context="authState">
+            <Authorized>
+                <button class="btn btn-primary" mb-2 @onclick="CreateAvailability">
+                    Create Availability
+                </button>
+            </Authorized>
+        </AuthorizeView>
+        <br />
+        <input @bind="formatFilter" placeholder="Search Stores by Name..." class="form-control mb-3" />
+            <div class="currency-select">
+                <div class="search-currency">
+                    <select class="form-select" @bind="SelectedCode">
+                        <option value="USD">$ - USD</option>
+                        <option value="CAD">$ - CAD</option>
+                        <option value="EUR">&#x20AC - EUR</option>
+                    </select>
+                </div>
+            </div>
+        <QuickGrid Items="filteredAvailabilities" Pagination="paginationState">
+            <TemplateColumn>
+                <ChildContent Context="a">
+                    @if (!string.IsNullOrEmpty(a.Store.LogoURL))
+                    {
+                         <a target="_blank" rel="noopener noreferrer" href="@a.URL"><img src="@a.Store.LogoURL" alt="@a.Store.Name Logo" style=" min-width: 50px; max-width: 75px; max-height: 75px;" /></a>
+                    }
+                    else
+                    {
+                            <a target="_blank" rel="noopener noreferrer" href="@a.URL">@a.Store.Name</a>
+                    }
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Property=" a => a.Price" Title="Price" Sortable="true" />
+            <PropertyColumn Property=" a => a.UnitSold" Title="Per Unit" Sortable="true" />
+            <TemplateColumn Title = "Buy Here">
+                <ChildContent Context="a">
+                    <button class="btn btn-primary" mb-2 @onclick="() => OpenStorePage(a.URL)">
+                        <i class="bi bi-cart4"></i> Purchase
+                     </button>
+                </ChildContent>
+            </TemplateColumn>
+            <TemplateColumn Context="availability">
+                <AuthorizeView Roles="Admin, Moderator" Context="authState">
+                    <Authorized>
+                            <button class="btn btn-primary" mb-2 @onclick="() => EditAvailability(availability.Id)">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                    </Authorized>
+                </AuthorizeView>
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+
+    <Paginator State="@paginationState" />
+    @* <div class="page-buttons">
+        Page(s):
+        @if (paginationState.TotalItemCount.HasValue)
+        {
+            for (var pageIndex = 0; pageIndex <= paginationState.LastPageIndex; pageIndex++)
+            {
+                var capturedIndex = pageIndex; // Capture the current page index
+                <button @onclick="@(() => GoToPageAsync(capturedIndex))"
+                                  class="btn btn-primary @PageButtonClass(capturedIndex)"
+                                  aria-current="@AriaCurrentValue(capturedIndex)"
+                                  aria-label="Go to page @(pageIndex + 1)">
+                                  @(pageIndex + 1)
+                </button>
+            }
+        }
+    </div> *@
+	}
+}
+
+
+
+
+
+@code {
+    [Parameter]
+    public int FormatId { get; set; }
+    private string formatFilter = string.Empty;
+    private int totalAvailabilities = 0;
+
+    private bool isLoading = true;
+
+    PaginationState paginationState = new PaginationState { ItemsPerPage = 5 };
+
+    private string? SelectedCode = "USD";
+
+    private List<AvailabilityResponse> availabilities = new List<AvailabilityResponse>();
+    private IQueryable<AvailabilityResponse>? queryableAvailabilities;
+    private IQueryable<AvailabilityResponse>? filteredAvailabilities => queryableAvailabilities?.Where(f => f.Store.Name.Contains(formatFilter, StringComparison.OrdinalIgnoreCase) && f.CurrencyCode == SelectedCode);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (FormatId > 0)
+        {
+            await LoadAvailabilities();
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadAvailabilities()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/Availability/format/{FormatId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<List<AvailabilityResponse>>();
+                queryableAvailabilities = result?.AsQueryable();
+                totalAvailabilities = queryableAvailabilities?.Count() ?? 0;
+                SetSelectedCurrency();
+            }
+            else if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                totalAvailabilities = 0;
+            }
+            else
+            {
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+    private async Task GoToPageAsync(int pageIndex)
+    {
+        await paginationState.SetCurrentPageIndexAsync(pageIndex);
+    }
+
+    private void SetSelectedCurrency()
+    {
+        var availableCurrencies = queryableAvailabilities?
+            .Select(a => a.CurrencyCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (availableCurrencies is null || availableCurrencies.Count == 0)
+        {
+            SelectedCode = "USD";
+            return;
+        }
+
+        SelectedCode = availableCurrencies.Contains("USD", StringComparer.OrdinalIgnoreCase)
+            ? "USD"
+            : availableCurrencies.First();
+    }
+
+    private string? PageButtonClass(int pageIndex) => paginationState.CurrentPageIndex == pageIndex ? "current" : null;
+
+    private string? AriaCurrentValue(int pageIndex) => paginationState.CurrentPageIndex == pageIndex ? "page" : null;
+
+    private int DecodeHash(string hash)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var realId = sqids.Decode(hash).Single();
+        return realId;
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+    private void CreateAvailability()
+    {
+        NavigationManager.NavigateTo($"/formats/{CreateIDHash(FormatId)}/availabilities/create");
+    }
+
+    private void EditAvailability(int availabilityId)
+    {
+        NavigationManager.NavigateTo($"/formats/{CreateIDHash(FormatId)}/availabilities/{availabilityId}/edit");
+    }
+
+    private async void OpenStorePage(string url)
+    {
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+}

@@ -1,0 +1,171 @@
+﻿@page "/categories/edit/{Slug}"
+@page "/categories/create"
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject IAuthService AuthService
+@attribute [Authorize(Roles ="Admin")]
+@* @implements IDisposable *@
+
+
+
+@if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/categories">Categories</a></li>
+			<li class="breadcrumb-item active">Editing Category</li>
+		</ol>
+	</nav>
+	<h3>Edit Category</h3>
+	<PageTitle>DoYouOwnIt: Edit Category @category.Name</PageTitle>
+}
+else
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/categories">Categories</a></li>
+			<li class="breadcrumb-item active">Creating New Product Category</li>
+		</ol>
+	</nav>
+	<h3>Create New Category</h3>
+	<PageTitle>DoYouOwnIt: Create a New Product Category</PageTitle>
+}
+
+<EditForm Model="category" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<div class="mb-3">
+		<label for="categoryName" class="form-label">Category Name</label>
+		<InputText id="categoryName" class="form-control" @bind-Value="category.Name" />
+		<ValidationMessage For="@(() => category.Name)" />
+	</div>
+	@if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+	{
+		<div class="mb-3">
+			<label for="categorySlug" class="form-label">Slug</label>
+			<InputText id="categorySlug" class="form-control" @bind-Value="category.Slug" />
+			<ValidationMessage For="@(() => category.Slug)" />
+		</div>
+	}
+	<div class="mb-3">
+		<label for="categoryDescription" class="form-label">Description</label>
+		<InputTextArea id="categoryDescription" class="form-control" @bind-Value="category.Description" />
+		<ValidationMessage For="@(() => category.Description)" />
+	</div>
+	<div class="mb-3">
+		<label for="categoryCreatorsTitle">Creators Title</label>
+		<InputText id="categoryCreatorsTitle" class="form-control" @bind-Value="category.CreatorsTitle" />
+		<ValidationMessage For="@(() => category.CreatorsTitle)" />
+	</div>
+	<div class="mb-3">
+		<label for="categoryFormatsTitle">Formats Title</label>
+		<InputText id="categoryFormatsTitle" class="form-control" @bind-Value="category.FormatsTitle" />
+		<ValidationMessage For="@(() => category.FormatsTitle)" />
+	</div>
+	<div class="mb-3">
+		<label for="categoryTypeTitle">Type Title</label>
+		<InputText id="categoryTypeTitle" class="form-control" @bind-Value="category.TypeTitle" />
+		<ValidationMessage For="@(() => category.TypeTitle)" />
+	</div>
+	<div class="mb-3">
+		<label for="categoryEditionTitle">Edition Title</label>
+		<InputText id="categoryEditionTitle" class="form-control" @bind-Value="category.EditionTitle" />
+		<ValidationMessage For="@(() => category.EditionTitle)" />
+	</div>
+	<button type="submit" class="btn btn-primary mt-4">Submit</button>
+</EditForm>
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	CategoryRequest category = new CategoryRequest();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if(Id != null)
+		{
+			var response = await CategoryService.GetCategoryById(Id.Value);
+			if(response != null)
+			{
+				category = new CategoryRequest
+				{
+					Name = response.Name,
+					Description = response.Description,
+					Slug = response.Slug,
+					CreatorsTitle = response.CreatorsTitle,
+					FormatsTitle = response.FormatsTitle,
+					TypeTitle = response.TypeTitle,
+					EditionTitle = response.EditionTitle
+				};
+			}
+			else
+			{
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+		else if(Slug != null && Slug != "")
+		{
+			var response = await CategoryService.GetCategoryBySlug(Slug);
+			if(response != null)
+			{
+				category = new CategoryRequest
+				{
+					Id = response.Id,
+					Name = response.Name,
+					Description = response.Description,
+					Slug = response.Slug,
+					CreatorsTitle = response.CreatorsTitle,
+					FormatsTitle = response.FormatsTitle,
+					TypeTitle = response.TypeTitle,
+					EditionTitle = response.EditionTitle
+				};
+			}
+			else
+			{
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		if (Id == null && String.IsNullOrWhiteSpace(Slug))
+		{
+			await CategoryService.CreateCategory(category);
+		}
+		else if (Id != null || !String.IsNullOrWhiteSpace(Slug))
+		{
+			await CategoryService.UpdateCategoryByID(category.Id, category);
+		}
+		await JSRuntime.InvokeVoidAsync("alert", "Category saved successfully!");
+		NavigationManager.NavigateTo("/categories");
+	}
+}

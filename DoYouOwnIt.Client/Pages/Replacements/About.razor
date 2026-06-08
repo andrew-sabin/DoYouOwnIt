@@ -1,0 +1,116 @@
+﻿@page "/about"
+
+@inject INewsBlogService articleService
+@inject IUserService UserService
+@inject NavigationManager navigationManager
+@inject AuthenticationStateProvider authenticationStateProvider
+
+<PageTitle>About DoYouOwnIt</PageTitle>
+<div class="article-grid">
+    <div class="left-column"></div>
+    <div class="main-content-column">
+
+        @if (newsArticle != null)
+        {
+            <div class="article-breadcrumbs-col">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active">@newsArticle.Value.Title</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="article-title-col">
+                <hr />
+                <h1>@newsArticle.Value.Title</h1>
+                @if (!string.IsNullOrWhiteSpace(newsArticle.Value.CoverImageUrl))
+                {
+                    <img src="@newsArticle.Value.CoverImageUrl"
+                         style="max-width: min(300px, 100%); max-height: 300px;"
+                         class="img-thumbnail" />
+                }
+            </div>
+            <div class="article-authors-col">
+                @if (!isLoading)
+                {
+                    @if (newsArticle.Value.AuthorId != newsArticle.Value.ModifierId)
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" onlyShowName="true" />
+                        <p><strong>Lasted Edited By:</strong></p>
+                        <DisplayUserInfo UserId="@editorId" onlyShowName="true" />
+                    }
+                    else
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" />
+                    }
+                    <br />
+                    <p><strong>Last Updated: </strong>@newsArticle.Value.ModifiedDate.ToString("MM/dd/yyyy") at @newsArticle.Value.ModifiedDate.ToShortTimeString()</p>
+                }
+            </div>
+            <AuthorizeView Roles="Admin" Context="authState">
+                <Authorized>
+                    <div class="article-edit-button">
+                        <button class="btn btn-primary" onclick="@(() => EditArticle(newsArticle.Value.slug))">Edit Article</button>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+            <div class="article-body-col">
+                <hr />
+                @((MarkupString)newsArticle.Value.NewsArticle)
+            </div>
+        }
+        else
+        {
+            <h2>404 Article Not Found</h2>
+        }
+    </div>
+    <div class="right-column"></div>
+</div>
+
+@code {
+    public string articleType { get; set; } = "About";
+
+    private NewsBlogResponse? newsArticle = new NewsBlogResponse();
+
+    private string? authorId { get; set; }
+    private string? editorId { get; set; }
+
+    private DateOnly articleCreationDate { get; set; }
+    private DateOnly? articleEditedDate { get; set; } = null;
+
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(articleType))
+        {
+            navigationManager.NavigateTo("notfound");
+        }
+
+        var result = await articleService.GetFirstTypeArticle(articleType);
+        if (result == null)
+        {
+            newsArticle = null;
+        }
+        else
+        {
+            newsArticle = result;
+            authorId = result.Value.AuthorId;
+            editorId = result.Value.ModifierId;
+
+            articleCreationDate = DateOnly.FromDateTime(result.Value.CreatedDate);
+            if (result.Value.ModifiedDate != result.Value.CreatedDate)
+            {
+                articleEditedDate = DateOnly.FromDateTime(result.Value.ModifiedDate);
+            }
+        }
+        isLoading = false;
+    }
+    private void EditArticle(string slug)
+    {
+        navigationManager.NavigateTo($"/site-news/article/{slug}/edit");
+    }
+
+}

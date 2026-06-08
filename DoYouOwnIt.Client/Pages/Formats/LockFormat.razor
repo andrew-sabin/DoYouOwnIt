@@ -1,0 +1,157 @@
+﻿@page "/products/view/{productSlug}/formats/{formatHash}/lock"
+@using DoYouOwnIt.Shared.Enums
+@inject IProductService ProductService
+@inject IFormatService FormatService
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "Admin, Moderator")]
+
+@if (formatId == null)
+{
+	@if (productSlug == null || product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@productSlug">@product.Name</a></li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+	}
+	<h3>Create Format</h3>
+}
+else
+{
+	@if (productSlug == null || product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active"><a href="/products/view/@productSlug/formats/@formatId">@format.Type @format.Edition</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@product.Slug">@product.Name</a></li>
+				<li class="breadcrumb-item active"><a href="/products/view/@productSlug/formats/@formatId">@format.Type @format.Edition</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	<PageTitle>Lock Format: @format.Type - @format.Edition for @product!.Name - DoYouOwnIt</PageTitle>
+	<h3>Lock Format</h3>
+}
+
+<EditForm Model="@format">
+	<div class="form-group">
+		<InputCheckbox id="formatIsLocked" class="form-check-input" @bind-Value="format.IsLocked" />
+		<label class="form-check-label" for="formatIsLocked">Locked</label>
+	</div>
+	@if (format.IsLocked)
+	{
+		<div class="form-group">
+			<label for="formatLockedReason">Lock Reason</label>
+			<InputTextArea id="formatLockedReason" class="form-control" @bind-Value="format.lockedReason" />
+		</div>
+	}
+	</EditForm>
+<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+
+	@code {
+	[Parameter]
+	public int? formatId { get; set; }
+	[Parameter]
+	public int? productId { get; set; }
+	[Parameter]
+	public string? formatHash { get; set; }
+	[Parameter]
+	public string? productSlug { get; set; }
+
+	private FormatRevisionRequest format = new()
+	{
+		OwnershipLevel = OwnershipLevel.Unknown // Ensure OwnershipLevel is initialized to a default value
+	};
+	private ProductResponseJustCategoryId? product = new();
+	
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if (!String.IsNullOrEmpty(formatHash))
+		{
+			formatId = DecodeHash(formatHash);
+		}
+		var result = await FormatService.GetFormatByID((int)formatId!);
+		if (result is not null)
+		{
+			format = new FormatRevisionRequest
+			{
+				Type = result.Value.Type,
+				Edition = result.Value.Edition,
+				IsLocked = result.Value.IsLocked,
+				lockedReason = result.Value.lockedReason,
+				CoverImageUrl = result.Value.CoverImageUrl,
+				Slug = result.Value.Slug,
+				ReleaseDate = result.Value.ReleaseDate,
+				Description = result.Value.Description,
+				OwnershipLevel = result.Value.OwnershipLevel, // Ensure OwnershipLevel is set from the result
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith
+			};
+			product = result.Value.Product;
+		}
+		else
+		{
+			await CancelEdit();
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		await FormatService.LockFormat((int)formatId!, format);
+		NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+	}
+	async Task CancelEdit()
+	{
+		NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+	}
+}

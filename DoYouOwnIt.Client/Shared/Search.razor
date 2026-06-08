@@ -1,0 +1,161 @@
+﻿@using EasyAppDev.Blazor.AutoComplete.Options
+@inject NavigationManager NavigationManager
+@inject ICategoryService CategoryService
+@inject HttpClient Http
+
+<div class="search-grid">
+	<div class="search-container">
+		<div class="search-bar">
+			
+			<AutoComplete 
+				TItem="Product"
+				Items="@products"
+				ThemePreset="ThemePreset.Bootstrap"
+				PrimaryColor="#f9f9f9"
+				BorderRadius="5px"
+				DataSource ="_odataSource"
+				DisplayMode="ItemDisplayMode.Card"
+				TextField="@(p => p.Name)"
+				SubtitleField="@(p => p.Creators)"
+				DescriptionField="@(p => p.CategoryName)"
+				@bind-Value="selectedProduct"
+				@bind-SearchText="searchText"
+				@onkeydown="Enter"
+				Placeholder="Search products or creators..." />
+		</div>
+
+		<div class="search-categories">
+			<select class="form-select" @bind="CategoryId">
+				<option value="0">All Categories</option>
+				@foreach (var category in Categories)
+				{
+					<option value="@category.Id">@category.Name</option>
+				}
+			</select>
+		</div>
+		<div class="search-button">
+			<button class="btn btn-primary" @onclick="Send"><i class="bi bi-search"></i></button>
+		</div>
+	</div>
+
+	<div class="search-message">
+		@if (blankSearch)
+		{
+			<p class="alert-warning">Please enter in a product name.</p>
+		}
+	</div>
+</div>
+
+
+
+
+
+@code {
+	[Parameter]
+	[SupplyParameterFromQuery]
+	public string ProductName { get; set; } = string.Empty;
+
+	[Parameter]
+	[SupplyParameterFromQuery]
+	public int CategoryId { get; set; } = 0;
+
+	private ODataDataSource<Product> _odataSource = null!;
+	private IEnumerable<Product>? products;
+	// changed from field to property so we can run navigation when selection changes
+	private Product? _selectedProduct;
+	private Product? selectedProduct
+	{
+		get => _selectedProduct;
+		set
+		{
+			if (!EqualityComparer<Product?>.Default.Equals(_selectedProduct, value))
+			{
+				_selectedProduct = value;
+				// fire-and-forget navigation when selection changes
+				_ = GotoPage();
+			}
+		}
+	}
+
+	private string searchText { get; set; } = string.Empty;
+	private string? selectedProductSlug { get; set; } = string.Empty;
+
+	private bool blankSearch { get; set; } = false;
+
+	private List<CategoryResponse> Categories { get; set; } = new List<CategoryResponse>();
+
+	protected override async Task OnInitializedAsync()
+	{
+		Categories = await CategoryService.GetAllProductCategories();
+
+		var options = new ODataOptions
+			{
+				EndpointUrl = "odata/Product",
+				FilterStrategy = ODataFilterStrategy.Contains,
+				Top = 5,
+				MinSearchLength = 3,
+				Select = new[] { "Id", "Name", "Creators", "CategoryName"}
+			};
+		_odataSource = new ODataDataSource<Product>(Http, options, searchFieldNames: new[] { "Name", "Creators" });
+	}
+
+	private async Task GotoPage()
+	{
+		Send();
+	}
+
+	async void Send()
+	{
+		if (selectedProduct != null)
+		{
+			if (CategoryId > 0)
+			{
+				blankSearch = false;
+				var cata = Categories.FirstOrDefault(c => c.Id == CategoryId);
+				if (cata is not null && !string.IsNullOrWhiteSpace(cata.Slug))
+				{
+					var encodedTitle = Uri.EscapeDataString(selectedProduct.Name);
+					var uri = $"/products/{cata.Slug}/?title={encodedTitle}";
+					NavigationManager.NavigateTo(uri, true);
+					return;
+				}
+			}
+			else
+			{
+				var encodedFallbackTitle = Uri.EscapeDataString(selectedProduct.Name);
+				NavigationManager.NavigateTo($"/products/all/?title={encodedFallbackTitle}", true);
+			}
+		}
+
+		if (!String.IsNullOrEmpty(searchText))
+		{
+			if (CategoryId > 0)
+			{
+				blankSearch = false;
+				var cata = Categories.FirstOrDefault(c => c.Id == CategoryId);
+				if (cata is not null && !string.IsNullOrWhiteSpace(cata.Slug))
+				{
+					var encodedTitle = Uri.EscapeDataString(searchText);
+					var uri = $"/products/{cata.Slug}/?title={encodedTitle}";
+					NavigationManager.NavigateTo(uri, true);
+					return;
+				}
+			}
+			var encodedFallbackTitle = Uri.EscapeDataString(searchText);
+			NavigationManager.NavigateTo($"/products/all/?title={encodedFallbackTitle}",true);
+		}
+		else
+		{
+			blankSearch = true;
+		}
+
+	}
+
+	public void Enter(KeyboardEventArgs e)
+	{
+		if (e.Code == "Enter" || e.Code == "NumpadEnter")
+		{
+			Send();
+		}
+	}
+}

@@ -1,0 +1,169 @@
+﻿@page "/formats/{formatHash}/availabilities/create"
+@page "/formats/{formatHash}/availabilities/{availabilityID:int}/edit"
+@inject IAvailabilityService AvailabilityService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IStoreService StoreService
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles="Admin,Moderator")]
+
+@if (availabilityId == null)
+{
+	<h3>Create Availability</h3>
+	<PageTitle>DoYouOwnIt: Creating a New Availability For @formatId</PageTitle>
+}
+else
+{
+	<h3>Edit Availability</h3>
+	<PageTitle>DoYouOwnIt: Edit Availability @availabilityId for format @formatId</PageTitle>
+}
+
+
+
+<EditForm Model="availability" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<div class="mb-3">
+		<label for="availStoreId">Store Id:</label>
+		<InputSelect id="availStoreId" class="form-select" @bind-Value="availability.StoreId">
+			<option value="0">---Select A Store---</option>
+			@foreach(var store in StoreService.Stores)
+			{
+				<option value="@store.Id">@store.Name</option>
+			}
+		</InputSelect>
+		<ValidationMessage For="@(() => availability.StoreId)" />
+	</div>
+	<div class="mb-3">
+		<label for="availURL">Product Website URL:</label>
+		<InputText id="availURL" class="form-control" @bind-Value="availability.URL" />
+		<ValidationMessage For="@(() => availability.URL)" />
+	</div>
+	<div class="mb-3">
+		<label for="availCurrencyCode">Currency Code:</label>
+		<InputSelect id="availCurrencyCode" class="form-select" @bind-Value="availability.CurrenceyCode">
+			<option value="USD">USD - United States Dollar</option>
+			<option value="CAD">CAD - Canadian Dollar</option>
+			<option value="EUR">EUR - Euro</option>
+		</InputSelect>
+		<ValidationMessage For="@(() => availability.CurrenceyCode)" />
+	</div>
+	<div class="mb-3">
+		<label for="availUnitSold">Unit Sold Specifics:</label>
+		<InputText id="availUnitSold" class="form-control" @bind-Value="availability.UnitSold" />
+		<ValidationMessage For="@(() => availability.UnitSold)" />
+	</div>
+	<div class="mb-3">
+		<label for="availPrice">Price</label>
+		<InputNumber id="availPrice" class="form-control" @bind-Value="availability.Price" />
+		<ValidationMessage For="@(() => availability.Price)" />
+	</div>
+</EditForm>
+@if (availabilityId != null)
+{
+	<button class="btn btn-danger mt-4 mx-2" @onclick="() => DeleteAvailability((int)availabilityId)">Delete Availability</button>
+}
+<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="GoBack">Cancel</button>
+
+@code {
+	[Parameter]
+	public int formatId { get; set; }
+	[Parameter]
+	public int? availabilityId { get; set; }
+	[Parameter]
+	public string? formatHash { get; set; }
+
+	AvailabilityRequest availability = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		if (StoreService.Stores.Count == 0)
+		{
+			await StoreService.LoadAllStoresAsync();
+		}
+		StoreService.OnChange += StateHasChanged;
+	}
+
+	protected async override Task OnParametersSetAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if (!String.IsNullOrEmpty(formatHash))
+		{
+			formatId = DecodeHash(formatHash);
+		}
+		if (availabilityId != null)
+		{
+			var result = await AvailabilityService.GetAvailabilityByID((int)availabilityId);
+			availability = new AvailabilityRequest
+			{
+				StoreId = result?.Store.Id ?? 0,
+				URL = result?.URL ?? string.Empty,
+				CurrenceyCode = result?.CurrencyCode ?? string.Empty,
+				Price = result?.Price ?? 0,
+				UnitSold = result?.UnitSold ?? string.Empty,
+				FormatId = formatId
+			};
+		}
+		else{
+			availability.FormatId = formatId;
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		if (availabilityId == null)
+		{
+			await AvailabilityService.CreateAvailability(availability);
+			await GoBack();
+		}
+		else
+		{
+			await AvailabilityService.UpdateAvailability((int)availabilityId, availability);
+			await GoBack();
+		}
+	}
+
+	async Task DeleteAvailability(int id)
+	{
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this product?");
+		if (confirmed)
+		{
+			await AvailabilityService.DeleteAvailability(id);
+			await GoBack();
+		}
+		
+	}
+
+	private int DecodeHash(string hash)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = 6,
+			Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+		});
+		var realId = sqids.Decode(hash).Single();
+		return realId;
+	}
+
+	async Task GoBack()
+	{
+		await JSRuntime.InvokeVoidAsync("history.back");
+	}
+}

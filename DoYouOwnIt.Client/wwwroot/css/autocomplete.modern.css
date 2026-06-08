@@ -1,0 +1,95 @@
+/* EasyAppDev.Blazor.AutoComplete - Modern Theme */
+/* This theme provides a clean, modern look for the AutoComplete component */
+
+:root {
+    --ac-primary-color: #f9f9f9;
+    --ac-primary-dark: #e0e0e0;
+    --ac-text-color: #333;
+    --ac-border-color: #ddd;
+    --ac-bg-hover: #f5f5f5;
+    --ac-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ac-container {
+    --ac-primary: var(--ac-primary-color);
+    --ac-primary-dark: var(--ac-primary-dark);
+    --ac-text: var(--ac-text-color);
+    --ac-border: var(--ac-border-color);
+    --ac-bg-hover: var(--ac-bg-hover);
+    --ac-shadow: var(--ac-shadow);
+}
+
+.ac-input {
+    background-color: #fff;
+    color: var(--ac-text-color);
+    border: 1px solid var(--ac-border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.ac-input:hover {
+    border-color: var(--ac-primary-color);
+    box-shadow: var(--ac-shadow);
+}
+
+.ac-input:focus {
+    outline: none;
+    border-color: var(--ac-primary-color);
+    box-shadow: 0 0 0 3px rgba(249, 249, 249, 0.1);
+}
+
+.ac-dropdown {
+    background-color: #fff;
+    border: 1px solid var(--ac-border-color);
+    border-radius: 8px;
+    box-shadow: var(--ac-shadow);
+    margin-top: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ac-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.ac-item:hover {
+    background-color: var(--ac-bg-hover);
+}
+
+.ac-item.selected {
+    background-color: var(--ac-primary-color);
+    color: #000;
+    font-weight: 500;
+}
+
+.ac-no-results {
+    padding: 20px 12px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.ac-loading {
+    padding: 15px 12px;
+    text-align: center;
+    color: #999;
+}
+
+.ac-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--ac-primary-color);
+    border-radius: 50%;
+    animation: ac-spin 1s linear infinite;
+}
+
+@keyframes ac-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

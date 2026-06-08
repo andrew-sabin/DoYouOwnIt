@@ -1,0 +1,95 @@
+﻿@page "/confirm-email"
+@inject HttpClient HttpClient
+@inject NavigationManager navigationManager
+@using DoYouOwnIt_Shared.Models.Emails
+
+<div class="site-grid">
+    <div class="left-column"></div>
+    <div class="main-content-column">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active">Confirming Email</li>
+            </ol>
+        </nav>
+
+        <PageTitle>Confirm Email for DoYouOwnIt</PageTitle>
+        <h3>Confirm Email</h3>
+
+        @if (isConfirmed)
+        {
+            <div class="alert alert-success">
+                @message
+            </div>
+            <a href="/login" class="btn btn-primary">Go to Login</a>
+        }
+        else if (isError)
+        {
+            <div class="alert alert-danger">
+                @message
+            </div>
+        }
+        else
+        {
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Confirming your email...</p>
+            </div>
+        }
+    </div>
+    <div class="right-column"></div>
+</div>
+
+
+
+
+
+
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery (Name ="user")]
+    public string? userName { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery (Name ="c")]
+    public string? Code { get; set; }
+
+    private bool isConfirmed = false;
+    private bool isError = false;
+    private string message = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if(string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(Code))
+        {
+            isError = true;
+            message = "Invalid confirmation link.";
+            return;
+        }
+
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<ConfirmEmailResponse>($"api/Account/confirm-email?userName={userName}&code={Code}");
+
+            if (response.Message != null)
+            {
+                isConfirmed = true;
+                message = response.Message;
+            }
+            else
+            {
+                isError = true;
+                message = "Error in confirming account email";
+            }
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = "Error confirming your email. Please try again.";
+        }
+    }
+
+}

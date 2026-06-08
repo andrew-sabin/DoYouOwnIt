@@ -1,0 +1,14 @@
+﻿/*a + a {
+    margin-left: 0.5rem;
+}
+
+@media(max-width: 640px){
+    a {
+        display: inline-block;
+    }
+
+    a + a {
+        margin-left: 0.5rem important!;
+        margin-top: 0.25rem;
+    }
+}*/

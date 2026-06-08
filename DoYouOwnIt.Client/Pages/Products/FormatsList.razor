@@ -1,0 +1,172 @@
+﻿@inject HttpClient Http
+@inject IProductService ProductService
+
+@if (FromProdList == true)
+{
+    @if (formats == null)
+    {
+        <p><strong>Loading In Formats Please Wait...</strong></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>@TypeTitle</th>
+                    <th>@EditionTitle</th>
+                    <th>Release Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var format in formats.Take(5))
+                {
+                    <tr>
+                        @if (string.IsNullOrEmpty(format.CoverImageUrl))
+                        {
+                            <td>
+                            <a href="/products/view/@ProductSlug/formats/@CreateIDHash(format.Id)">
+                                <img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+                                     class="img-thumbnail"
+                                     style="max-width: min(50px, 100%); max-height: 75px;"
+                                     alt="Missing Image Picture Created By: Khanh Nguyen" />
+                            </a>
+                            </td>
+                        }
+                        else
+                        {
+                            <td><a href="/products/view/@ProductSlug/formats/@CreateIDHash(format.Id)">
+                                <img src="@format.CoverImageUrl" style="max-width: min(50px, 100%); max-height: 50px;" 
+                                class="img-thumbnail" />
+                                </a>
+                                </td>
+                        }
+                        <td><a href="/products/view/@ProductSlug/formats/@CreateIDHash(format.Id)">@format.Type</a></td>
+                        <td><a href="/products/view/@ProductSlug/formats/@CreateIDHash(format.Id)">@format.Edition</a></td>
+                        <td><a href="/products/view/@ProductSlug/formats/@CreateIDHash(format.Id)">@format.ReleaseDate</a></td>
+                        <td><a href="/products/view/@ProductSlug/formats/@CreateIDHash(format.Id)">Click for more details</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <a href="/products/view/@ProductSlug">Click here to see more</a>
+    }
+}
+else
+{
+    @if (formats == null)
+    {
+        <p>Loading Formats...</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Format</th>
+                    <th>Edition</th>
+                    <th>Release Date</th>
+                    <th>Ownership Level </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var format in formats)
+                {
+                    <tr>
+                        <td>@format.Type</td>
+                        <td>@format.Edition</td>
+                        <td>@format.ReleaseDate</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+
+
+
+@code {
+    [Parameter]
+    public int ProductId { get; set; }
+    [Parameter]
+    public string ProductSlug { get; set; } = string.Empty;
+    [Parameter]
+    public bool FromProdList { get; set; } = false;
+    [Parameter]
+    public string TypeTitle { get; set; } = "Format";
+    [Parameter]
+    public string EditionTitle { get; set; } = "Edition";
+
+    private List<FormatResponse>? formats = new List<FormatResponse>();
+    private ProductResponse? product = new ProductResponse();
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProductId > 0)
+        {
+            await GetProductInfo();
+            await LoadFormats();
+        }
+        if (string.IsNullOrEmpty(TypeTitle))
+        {
+            TypeTitle = "Format";
+        }
+        if (string.IsNullOrEmpty(EditionTitle))
+        {
+            EditionTitle = "Edition";
+        }
+    }
+
+    private async Task GetProductInfo()
+    {
+        try
+        {
+            product = await ProductService.GetProductById((int)ProductId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+	private async Task LoadFormats()
+	{
+        try
+        {
+            var response = await Http.GetAsync($"api/format/product/{ProductId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                formats = await response.Content.ReadFromJsonAsync<List<FormatResponse>>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+    private string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Name ?? value.ToString();
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+}
+

@@ -1,0 +1,177 @@
+﻿@page "/register"
+@using DoYouOwnIt.Client.Services
+@using DoYouOwnIt.Client.Helpers
+@inject IAuthService AuthService
+@inject HttpClient httpClient
+
+
+<div class="site-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item active">Register An Account</li>
+			</ol>
+		</nav>
+
+		<PageTitle>Register An Account - DoYouOwnIt</PageTitle>
+		<h3>Register a New Account</h3>
+		<p>Please review the <a href="/about">About Page</a> and the <a href="/rules-for-posting">Rules For Posting</a> before registering an account.</p>
+
+		<div class="input-form">
+			<EditForm Model="newUser" OnValidSubmit="HandleValidSubmit">
+				<DataAnnotationsValidator />
+				<ValidationSummary />
+				<div>
+					<label for="username">Username:</label>
+					<InputText id="username" @bind-Value="newUser.Username" class="form-control" />
+					<ValidationMessage For="() => newUser.Username" />
+				</div>
+				<div>
+					<label for="email">Email:</label>
+					<InputText id="email" type="email" @bind-Value="newUser.Email" class="form-control" />
+					<ValidationMessage For="() => newUser.Email" />
+				</div>
+				<div>
+					<label for="DOB">Date of Birth</label>
+					<InputDate max="@DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")" min="@DateOnly.FromDateTime(DateTime.Now.AddYears(-120)).ToString("yyyy-MM-dd")"
+							   id="DOB" @bind-Value="newUser.DateOfBirth" class="form-control" />
+					<ValidationMessage For="() => newUser.DateOfBirth" />
+				</div>
+				<div>
+					<label for="password">Password:</label>
+					<InputText id="password" type="password" @bind-Value="newUser.Password" class="form-control" />
+					<ValidationMessage For="() => newUser.Password" />
+				</div>
+				<div>
+					<label for="confirmPassword">Confirm Password:</label>
+					<InputText id="confirmPassword" type="password" @bind-Value="newUser.ConfirmPassword" class="form-control" />
+					<ValidationMessage For="() => newUser.ConfirmPassword" />
+				</div>
+				<div class="aboutPageCheckbox">
+					<label class="form-check" for="checkboxAbout">Read The <a href="/about">About Page</a></label>
+					<InputCheckbox id="checkboxAbout" class="form-check-input" @bind-Value="readAboutPage" />
+				</div>
+				<div class="rulesPage">
+					<label class="form-check" for="rulesPageCheckbox">Read The <a href="/rules-for-posting">Rules For Posting</a></label>
+					<InputCheckbox id="rulesPageCheckbox" class="form-check-input" @bind-Value="readRulesForPosting" />
+				</div>
+				<br />
+				<GoogleRecaptcha @ref="googleRecaptcha"
+								 SuccessCallBack="OnSuccess"
+								 TimeOutCallBack="OnTimeout"
+								 ServerValidationErrorCallBack="ServerSideValidationError"
+								 ServerSideValidationHandler="ServerSideValidationHandler" />
+				@if (readRulesForPosting && readAboutPage && _isVerified)
+				{
+					<button class="btn btn-primary mt-2" type="submit">Register</button>
+				}
+				else
+				{
+					<button class="btn btn-primary mt-2" type="submit" disabled>Register</button>
+				}
+
+			</EditForm>
+			
+		</div>
+		@if (registrationFailed)
+		{
+			@foreach (var error in registrationErrors)
+			{
+				<div class="alert alert-danger mt-2">@error</div>
+			}
+		}
+		@if (registrationSuccessful)
+		{
+			<div class="alert alert-success mt-2">Registration successful! Please check your email to confirm.</div>
+		}
+		
+	</div>
+	<br/>
+	<div class="right-column"></div>
+</div>
+
+
+
+@code {
+
+	AccountRegistrationRequest newUser = new AccountRegistrationRequest();
+	bool registrationFailed = false;
+	bool registrationSuccessful = false;
+	bool readAboutPage = false;
+
+	bool readRulesForPosting = false;
+	List<string> registrationErrors = new List<string>();
+
+	public required GoogleRecaptcha googleRecaptcha;
+
+	private bool _isVerified = false;
+	private string errorMessage = "";
+
+	protected override void OnInitialized()
+	{
+		newUser.DateOfBirth = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-13));
+	}
+
+	private void OnSuccess(CaptchaSuccessEventArgs e)
+	{
+		_isVerified = true;
+		base.StateHasChanged();
+	}
+
+	private void OnTimeout(CaptchaTimeOutEventArgs e)
+	{
+		_isVerified = false;
+	}
+
+	private void ServerSideValidationError(CaptchaServerSideValidationErrorEventArgs e)
+	{
+		errorMessage = $"Captcha server side validation error: {e.ErrorMessage}";
+	}
+
+	private async Task<ServerSideCaptchaValidationResultModel> ServerSideValidationHandler(ServerSideCaptchaValidationRequestModel requestModel)
+	{
+		try
+		{
+			var response = await httpClient.PostAsJsonAsync("api/Captcha/validate", requestModel.CaptchaResponse);
+
+			var result = await response.Content.ReadFromJsonAsync<CaptchaVerificationResponse>();
+
+			if (response.IsSuccessStatusCode && result != null && result.Success)
+			{
+				return new ServerSideCaptchaValidationResultModel(true, "CAPTCHA validation successful.");
+			}
+			else
+			{
+				var errorMessage = result?.Message ?? "CAPTCHA validation failed on the server.";
+				return new ServerSideCaptchaValidationResultModel(false, errorMessage);
+			}
+		}
+		catch (HttpRequestException ex)
+		{
+			return new ServerSideCaptchaValidationResultModel(false, $"Network Error: {ex.Message}");
+		}
+
+	}
+
+	async Task HandleValidSubmit()
+	{
+		registrationFailed = registrationSuccessful = false;
+		registrationErrors = new List<string>();
+
+		var response = await AuthService.Register(newUser);
+		registrationSuccessful = response.Success;
+
+		if (!registrationSuccessful && response.Errors != null)
+		{
+			registrationFailed = true;
+			registrationErrors = response.Errors.ToList();
+		}
+		else if (!registrationSuccessful)
+		{
+			registrationFailed = true;
+			registrationErrors.Add("An unknown error occurred.");
+		}
+	}
+}

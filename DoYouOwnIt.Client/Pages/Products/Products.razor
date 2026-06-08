@@ -1,0 +1,363 @@
+﻿@page "/products/all/"
+@page "/products/{CategorySlug}/"
+@using DoYouOwnIt.Client.Shared
+@using System.Text.Json
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+<div class="products-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		<div class="category-display">
+			@if (CategoryId > 0)
+			{
+				<PageTitle>Product Search Searching in @productCategory.Name - DoYouOwnIt</PageTitle>
+				<h2>@productCategory.Name</h2>
+				<h3>@productCategory.Description</h3>
+			}
+			else
+			{
+				<PageTitle>Product Search - DoYouOwnIt</PageTitle>
+				<h2>Products</h2>
+				<h3>All Categories</h3>
+			}
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item active">Products Search</li>
+				</ol>
+			</nav>
+		</div>
+
+		<div class="product-search">
+			<Search ProductName="@ProductQuery" CategoryId="CategoryId" />
+			<br/>
+			@if (!String.IsNullOrEmpty(ProductQuery))
+			{
+				<p>Searching for: "@ProductQuery"</p>
+			}
+		</div>
+
+		
+
+		<AuthorizeView Roles="Admin, Moderator, AlphaTester" Context="authState">
+			<Authorized>
+				<button class="btn btn-primary" mb-2 @onclick="CreateProduct">
+					Create Product
+				</button>
+			</Authorized>
+		</AuthorizeView>
+
+
+		@* Full Implementation *@
+		<p>Currently on Page: @QueryPage</p>
+		@if (productAmount > 0)
+		{
+			@foreach (var item in products)
+			{
+				<div class="card my-4">
+					<div class="card-header">
+						<a href="/products/view/@item.Slug">
+							<h5>@item.Name</h5>
+						</a>
+					</div>
+					<div class="card-body">
+						<div class="product-container">
+							<div class="product-image-column">
+								@if (item.CoverImageURL == null || item.CoverImageURL == "")
+								{
+									<p>
+										<a href="/products/@item.Slug">
+											<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+												 class="img-thumbnail"
+												 style="max-width: min(200px, 100%); max-height: 300px;"
+												 alt="Missing Image Picture Created By: Khanh Nguyen" />
+										</a>
+									</p>
+									
+								}
+								else
+								{
+									<p>
+										<a href="/products/view/@item.Slug">
+											<img src="@item.CoverImageURL"
+												 style="max-width: min(200px, 100%); max-height: 200px;"
+												 class="img-thumbnail" />
+										</a>
+									</p>
+								}
+							</div>
+							<div class="product-details-column">
+								<p><strong>@item.Category.Name</strong></p>
+								@if (CategoryId <= 0 && string.IsNullOrEmpty(item.Category.CreatorsTitle))
+								{
+									<p><strong>Created By:</strong> @item.Creators</p>
+								}
+								else
+								{
+									<p><strong>@item.Category.CreatorsTitle:</strong> @item.Creators</p>
+								}
+								<p><strong>For Ages:</strong> @item.ContentRating+</p>
+								<p><strong>First Released:</strong> @item.ProductLaunchDate</p>
+				
+									@if (item.IsAIAssisted)
+									{
+										<p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+									}
+									@if (item.ForMatureAudiences)
+									{
+										<p><i class="bi bi-exclamation-diamond-fill"></i><b>For Mature Audiences Only</b></p>
+									}
+									</div>
+									<div class="product-description-row">
+										<p><strong>Product Description:</strong></p>
+										<p>@item.Description</p>
+										<button class="btn btn-primary" onclick="@(() => ViewProduct(item.Slug))">
+											View Product Details
+										</button>
+										@if (CategoryId <= 0 && string.IsNullOrEmpty(item.Category.FormatsTitle))
+										{
+											<button class="btn btn-primary" data-target="#productFormats"
+													@onclick="() => ShowFormats(item.Id)"
+													aria-expanded="@(productId == item.Id ? "true" : "false")"
+													area-controls="@("productFormats-{item.Id}")">
+												@(productId == item.Id ? "Hide Formats" : "Show Formats")
+											</button>
+										}
+										else
+										{
+											<button class="btn btn-primary" data-target="#productFormats"
+													@onclick="() => ShowFormats(item.Id)"
+													aria-expanded="@(productId == item.Id ? "true" : "false")"
+													area-controls="@("productFormats-{item.Id}")">
+												@(productId == item.Id ? $"Hide {item.Category.FormatsTitle}" : $"Show {item.Category.FormatsTitle}")
+											</button>
+										}
+										<AuthorizeView Roles="Admin, Moderator, AlphaUser" Context="authState">
+											<Authorized>
+												<button class="btn btn-primary" onclick="@(() => EditProduct(item.Slug))">
+													Edit Product
+												</button>
+											</Authorized>
+										</AuthorizeView>
+									</div>
+								</div>
+					</div>
+					<div class="@($"collapse {(productId == item.Id ? "show" : "")}")" id="@($"productFormats-{item.Id}")">
+						<div class="card card-body mt-2">
+							@if (productId == item.Id)
+							{
+								<FormatsList ProductId="@item.Id" ProductSlug="@item.Slug" TypeTitle="@item.Category.TypeTitle"
+											 EditionTitle="@item.Category.EditionTitle" FromProdList=true />
+							}
+						</div>
+					</div>
+				</div>
+			}
+		}
+		else
+		{
+			<p>No products available.</p>
+		}
+
+		@if (QueryPage > 1)
+		{
+			<button class="btn btn-primary mx-2" onclick="@(() => FirstPage())">
+				First Page
+			</button>
+			<button class="btn btn-primary mx-2" onclick="@(() => PrevPage())">
+				<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+			</button>
+		}
+		else
+		{
+			<button class="btn btn-primary mx-2" disabled>
+				First Page
+			</button>
+			<button class="btn btn-primary mx-2" disabled>
+				<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+			</button>
+		}
+
+		@if (productAmount == PageAmount)
+		{
+			<button class="btn btn-primary mx-2" onclick="@(() => NextPage())">
+				Next Page <i class="bi bi-arrow-right-square-fill"></i>
+			</button>
+		}
+		else
+		{
+			<button class="btn btn-primary mx-2" disabled>
+				Next Page <i class="bi bi-arrow-right-square-fill"></i>
+			</button>
+		}
+		<br />
+		<p>Currently on Page: @QueryPage</p>
+	</div>
+	<div class="right-column"></div>
+</div>
+
+
+
+
+
+
+
+@code {
+
+	[SupplyParameterFromQuery (Name="title")]
+	private string? ProductQuery { get; set; }
+
+	[Parameter]
+	public string? CategorySlug { get; set; }
+
+	[SupplyParameterFromQuery(Name = "category")]
+	private int CategoryId { get; set; } = 0;
+	private int QueryPage { get; set; } = 1;
+
+	private bool isLoading = true;
+
+	const int PageAmount = 15;
+
+	private List<ProductResponse> products = new List<ProductResponse>();
+	private CategoryResponse productCategory { get; set; } = new();
+
+	private int productAmount { get; set; }
+	// private bool hasSearched = false;
+	int productId;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (!string.IsNullOrEmpty(CategorySlug))
+		{
+			var catresult = await CategoryService.GetCategoryBySlug(CategorySlug);
+			if (catresult != null)
+			{
+				productCategory = catresult;
+				CategoryId = catresult.Id;
+			}
+		}
+		else if (CategoryId > 0)
+		{
+			var resp = await Http.GetAsync($"api/productcategory/{CategoryId}");
+			if (resp.IsSuccessStatusCode)
+			{
+				var text = await resp.Content.ReadAsStringAsync();
+				if (!string.IsNullOrWhiteSpace(text))
+				{
+					try
+					{
+						var catresult = JsonSerializer.Deserialize<CategoryResponse>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+						if (catresult != null)
+						{
+							productCategory = catresult;
+						}
+					}
+					catch (JsonException)
+					{
+						// ignore or handle invalid JSON
+					}
+				}
+			}
+		}
+		if (!String.IsNullOrEmpty(ProductQuery))
+		{
+			await ShowPage();
+		}
+		else
+		{
+
+			NavigationManager.NavigateTo("/");
+		}
+
+
+
+		// Check for query parameters on page load
+	}
+
+	private void ShowFormats(int id)
+	{
+		if (productId == id)
+		{
+			return;
+		}
+		productId = id;
+		StateHasChanged();
+	}
+
+	private async Task ShowPage()
+	{
+		var resp = await Http.GetAsync($"api/product/search/{CategoryId}/{Uri.EscapeDataString(ProductQuery ?? string.Empty)}?pageNumber={QueryPage}&pageSize={PageAmount}");
+		if (resp.IsSuccessStatusCode)
+		{
+			var text = await resp.Content.ReadAsStringAsync();
+			if (!string.IsNullOrWhiteSpace(text))
+			{
+				try
+				{
+					var results = JsonSerializer.Deserialize<List<ProductResponse>>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+					if (results != null)
+					{
+						products = results;
+						productAmount = products.Count();
+					}
+				}
+				catch (JsonException)
+				{
+					// ignore or handle invalid JSON
+				}
+			}
+		}
+	}
+
+	private async Task FirstPage()
+	{
+		QueryPage = 1;
+		await ShowPage();
+	}
+
+	protected async Task NextPage()
+	{
+		if (productAmount == 1)
+		{
+			QueryPage++;
+			await ShowPage();
+		}
+	}
+
+	private async Task PrevPage()
+	{
+		if (QueryPage > 1)
+		{
+			QueryPage--;
+			await ShowPage();
+		}
+			
+	}
+
+	private void CreateProduct()
+	{
+		NavigationManager.NavigateTo("/products/create");
+	}
+
+	private void EditProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/view/{id}/edit");
+	}
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/edit");
+	}
+
+	private void ViewProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/view/{id}/");
+	}
+	private void ViewProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/");
+	}
+
+}

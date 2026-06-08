@@ -1,0 +1,328 @@
+﻿@page "/format-types/{Id:int}/edit"
+@page "/format-types/create"
+@inject ICategoryService CategoryService
+@inject IFormatTypeService FormatTypeService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject IAuthService AuthService
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using System.Text.Json
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize(Roles ="Admin")]
+
+
+@if (Id != null)
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/format-types">Format Types</a></li>
+			<li class="breadcrumb-item active">Editing @formatType.Name</li>
+		</ol>
+	</nav>
+	<h3>Edit Format Type</h3>
+	<PageTitle>Editing Format Type: @formatType.Name - DoYouOwnIt</PageTitle>
+}
+else
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/format-types">Format Types</a></li>
+			<li class="breadcrumb-item active">Creating Format Type</li>
+		</ol>
+	</nav>
+	<h3>Create New Format Type</h3>
+	<PageTitle>Create a New Format Type</PageTitle>
+}
+
+@if (!String.IsNullOrEmpty(formatType.ImageUrl) && String.IsNullOrEmpty(FileUrl))
+{
+	<div class="mb-3">
+		<h3>Current Cover Image</h3>
+		<img src="@formatType.ImageUrl" alt="Current Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+	</div>
+}
+else if (!String.IsNullOrEmpty(formatType.ImageUrl) && !String.IsNullOrEmpty(FileUrl))
+{
+	<div class="mb-3">
+		<h3>Current Cover Image</h3>
+		<img src="@formatType.ImageUrl" alt="Current Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+	</div>
+	<div class="mb-3">
+		<h3>New Cover Image</h3>
+		<img src="@FileUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+	</div>
+}
+else if (String.IsNullOrEmpty(formatType.ImageUrl) && !String.IsNullOrEmpty(FileUrl))
+{
+	<div class="mb-3">
+		<h3>New Cover Image</h3>
+		<img src="@FileUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+	</div>
+}
+
+<EditForm Model="formatType" OnValidSubmit="HandleValidSubmit">
+	<DataAnnotationsValidator />
+	<div class="mb-3">
+		<label for="formatImage" class="form-label">Format Type Image</label>
+		<SfUploader ID="UploadFiles" AutoUpload="true" AllowedExtensions=".jpg,.jpeg,.png,.gif,.svg" EnableHtmlSanitizer="true">
+			<UploaderAsyncSettings SaveUrl="/api/Image/Save" RemoveUrl="/api/Image/DeleteFile"></UploaderAsyncSettings>
+			<UploaderEvents FileSelected="@OnFileSelected" BeforeRemove="@OnBeforeFileRemoved" OnRemove="@OnFileRemove" ValueChange="@OnChange" Success="@OnSuccess"></UploaderEvents>
+		</SfUploader>
+	</div>
+	<div class="mb-3">
+		<label for="formatTypeName" class="form-label">Format Type Name</label>
+		<InputText id="formatTypeName" class="form-control" @bind-Value="formatType.Name" />
+		<ValidationMessage For="@(() => formatType.Name)" />
+	</div>
+	<div class="mb-3">
+		<label for="Category">Category</label>
+		<InputSelect id="category" @bind-Value="formatType.CategoryId" class="form-select">
+			<option value="0">---Select A Category---</option>
+			@foreach (var category in CategoryService.ProductCategories)
+			{
+				<option value="@category.Id">@category.Name</option>
+			}
+		</InputSelect>
+		<ValidationMessage For="@(() => formatType.CategoryId)" />
+	</div>
+	<div class="mb-3">
+		<label for="formatTypeDescription" class="form-label">Description</label>
+		<InputTextArea id="formatTypeDescription" class="form-control" @bind-Value="formatType.Description" />
+		<ValidationMessage For="@(() => formatType.Description)" />
+	</div>
+	<div class="mb-3">
+		<label for="formatTypeHasIssue" class="form-label">Does this have an issue across all of this type?</label>
+		<InputCheckbox id="formatTypeHasIssue" class="form-check" @bind-Value="formatType.HasIssue" />
+		<ValidationMessage For="@(() => formatType.HasIssue)" />
+	</div>
+	@if (formatType.HasIssue)
+	{
+		<div class="mb-3">
+			<label for="formatTypeIssue" class="form-label">What is the universal issue?</label>
+			<InputTextArea id="formatTypeIssue" class="form-control" @bind-Value="formatType.Issue" />
+			<ValidationMessage For="@(() => formatType.Issue)" />
+		</div>
+		<div class="mb-3">
+			<label for="formatTypeIssueURL" class="form-label">Source for information</label>
+			<InputText id="formatTypeIssueURL" class="form-control" @bind-Value="formatType.IssueURL" />
+			<ValidationMessage For="@(() => formatType.IssueURL)" />
+		</div>
+	}
+	
+	<button type="submit" class="btn btn-primary mt-4">Submit</button>
+</EditForm>
+<button type="button" class="btn btn-danger mt-4 mx-2"
+		@onclick="DeleteFormatType">
+	Delete
+</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+
+	FormatTypeRequest formatType = new FormatTypeRequest { Name = string.Empty, Description = string.Empty };
+
+	private List<string> savedFiles = new();
+	private List<string> fileLocations = new();
+	private List<Syncfusion.Blazor.Inputs.FileInfo> uploadedFiles = new();
+
+	private string? saveDirectory { get; set; }
+
+	public string? FileUrl { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		if (CategoryService.ProductCategories.Count == 0)
+		{
+			await CategoryService.LoadAllProductCategories();
+		}
+		CategoryService.OnChange += StateHasChanged;
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if(Id != null)
+		{
+			var response = await FormatTypeService.GetFormatTypeByID(Id.Value);
+			if(response != null)
+			{
+				formatType = new FormatTypeRequest
+				{
+					Name = response.Value.Name,
+                    Description = response.Value.Description ?? string.Empty,
+					CategoryId = response.Value.CategoryId,
+					ImageUrl = response.Value.ImageUrl,
+					HasIssue = response.Value.HasIssue,
+					Issue = response.Value.Issue,
+					IssueURL = response.Value.IssueURL
+				};
+			}
+			else
+			{
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+	}
+
+	private async Task OnFileSelected(SelectedEventArgs args)
+	{
+		args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "format-type" },
+		new { blobDirectory = "covers"} };
+	}
+
+	private async Task OnBeforeFileRemoved(BeforeRemoveEventArgs args)
+	{
+		args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "format-type" },
+		new { blobDirectory = "covers"} };
+	}
+
+	private async Task OnFileRemove(RemovingEventArgs args)
+	{
+		args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "format-type" },
+		new { blobDirectory = "covers"} };
+	}
+
+	private async Task OnChange(UploadChangeEventArgs args)
+	{
+		uploadedFiles.Clear();
+		if (args?.Files != null)
+		{
+			foreach (var f in args.Files)
+			{
+				uploadedFiles.Add(f.FileInfo);
+			}
+		}
+	}
+
+	private void OnFailure(FailureEventArgs args)
+	{
+		Console.WriteLine($"Upload failed: {args?.Response.ResponseText}");
+	}
+
+	private void ParseResponseString(string json)
+	{
+		using var doc = System.Text.Json.JsonDocument.Parse(json);
+		ParseResponseJsonElement(doc.RootElement);
+	}
+
+	private void ParseResponseJsonElement(JsonElement root)
+	{
+		if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+		{
+			if (root.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var f in files.EnumerateArray())
+				{
+					var name = f.GetString();
+					if (!string.IsNullOrEmpty(name) && !savedFiles.Contains(name))
+						savedFiles.Add(name);
+				}
+			}
+
+			if (root.TryGetProperty("fileLocations", out var locs) && locs.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var l in locs.EnumerateArray())
+				{
+					var loc = l.GetString();
+					if (!string.IsNullOrEmpty(loc) && !fileLocations.Contains(loc))
+						fileLocations.Add(loc);
+				}
+			}
+		}
+	}
+
+	private void OnSuccess(SuccessEventArgs args)
+	{
+		try
+		{
+			if (args == null) return;
+
+			// The server returns JSON like: { files: [...], fileLocations: [...] }
+			var response = args.Response.ResponseText;
+			if (response == null)
+				return;
+			ParseResponseString(response);
+
+			FileUrl = fileLocations[0];
+
+		}
+		catch (Exception ex)
+		{
+			FileUrl = null;
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+
+		if (!string.IsNullOrEmpty(FileUrl))
+		{
+			formatType.ImageUrl = FileUrl;
+			Console.WriteLine("Image is set");
+			Console.WriteLine($"FileUrl = {formatType.ImageUrl}");
+		}
+		else
+		{
+			Console.WriteLine("Image is not set.");
+		}
+
+
+		if (Id == null)
+		{
+			await FormatTypeService.CreateFormatType(formatType);
+			Console.WriteLine($"Creating a new formatType {formatType.Name}.");
+			await JSRuntime.InvokeVoidAsync("alert", "formatType created successfully!");
+			NavigationManager.NavigateTo("/format-types");
+		}
+		else if (Id != null)
+		{
+			await FormatTypeService.UpdateFormatType(Id!.Value, formatType);
+			await JSRuntime.InvokeVoidAsync("alert", "formatType saved successfully!");
+			NavigationManager.NavigateTo("/format-types");
+		}
+	}
+
+	private async void DeleteFormatType()
+	{
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this format?");
+		if (Id != null && confirmed)
+		{
+			await FormatTypeService.DeleteFormatType((int)Id);
+			NavigationManager.NavigateTo("/format-types");
+		}
+	}
+
+	async Task CancelEdit()
+	{
+		NavigationManager.NavigateTo($"/format-types");
+	}
+
+	public void Dispose()
+	{
+		// Unsubscribe from the event to prevent memory leaks
+		CategoryService.OnChange -= StateHasChanged;
+	}
+}

@@ -1,0 +1,84 @@
+﻿@page "/login"
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="site-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item active">Login</li>
+			</ol>
+		</nav>
+		<PageTitle>Login To DoYouOwnIt</PageTitle>
+		<h3>Login</h3>
+		<div class="input-form">
+			<EditForm Model="loginRequest" OnValidSubmit="HandleValidSubmit">
+				<DataAnnotationsValidator />
+				<ValidationSummary />
+				<div>
+					<label for="username">Username:</label>
+					<InputText id="username" @bind-Value="loginRequest.Username" class="form-control" />
+					<ValidationMessage For="() => loginRequest.Username" />
+				</div>
+				<div>
+					<label for="password">Password:</label>
+					<InputText id="password" type="password" @bind-Value="loginRequest.Password" class="form-control" />
+					<ValidationMessage For="() => loginRequest.Password" />
+				</div>
+				<button class="btn btn-primary mt-2" type="submit">Login</button>
+			</EditForm>
+		</div>
+		
+		<div class="forgotAndRegister">
+			<p>Forgot your password: <a href="/forgot-password">Click Here to Reset It</a></p>
+			<p>New? register your account here: <a href="/register">Click Here to Register</a></p>
+		</div>
+
+		@if (loginFailed)
+		{
+			<div class="alert alert-danger mt-2">@errorMessage</div>
+		}
+		else if (!loginFailed && loginSuccessful)
+		{
+			<div class="alert alert-success mt-2"><p>Login successful! You will be redirected to the home page.</p></div>
+		}
+	</div>
+	<div class="right-column"></div>
+</div>
+
+
+
+
+@code {
+	LoginRequest loginRequest = new LoginRequest();
+	private bool loginFailed { get; set; } = false;
+	private bool loginSuccessful { get; set; } = false;
+	private string? errorMessage { get; set; } = string.Empty;
+
+	async Task HandleValidSubmit()
+	{
+		loginFailed = loginSuccessful = false;
+		errorMessage = string.Empty;
+
+		var response = await AuthService.Login(loginRequest);
+		loginSuccessful = response.Success;
+
+		if (!loginSuccessful && response.Error != null)
+		{
+			loginFailed = true;
+			errorMessage = response.Error;
+		}
+		else if (!loginSuccessful)
+		{
+			loginFailed = true;
+			errorMessage = "Login failed due to an Unexpected Error. Please try again.";
+		}
+		else
+		{
+			await Task.Delay(2000);
+			Navigation.NavigateTo("/");
+		}
+	}
+}

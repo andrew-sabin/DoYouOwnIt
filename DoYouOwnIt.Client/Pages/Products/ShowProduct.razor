@@ -1,0 +1,249 @@
+﻿@page "/products/view/{Slug}"
+@using DoYouOwnIt.Client.Pages.Formats
+@inject HttpClient _http
+@inject IProductService ProductService
+@inject IUserTimeZoneService TimeZoneService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+
+<div class="product-page-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+@if(isLoading)
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/products/">Products</a></li>
+			<li class="breadcrumb-item active">Unknown</li>
+		</ol>
+	</nav>
+			<p><strong>Loading In Product Information Please Wait...</strong></p>
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+}
+else
+{
+	<PageTitle>@product!.Value.Name - DoYouOwnIt</PageTitle>
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/products/@product!.Value.Category.Slug/?title=@product.Value.Name">Products</a></li>
+			<li class="breadcrumb-item active">@product!.Value.Name</li>
+		</ol>
+	</nav>
+	<hr />
+	<div class="product-container-grid">
+	<div class="product-display-container">
+		@if (product.Value.CoverImageURL.IsWhiteSpace())
+		{
+			<div class="product-image-column">
+				<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+					 style="max-width: min(200px, 100%); max-height: 300px;"
+					 alt="Missing Image Picture Created By: Khanh Nguyen" />
+			</div>
+		}
+		else
+		{
+			<div class="product-image-column">
+				<img src="@product.Value.CoverImageURL" style="max-width: min(300px, 100%); max-height: 300px;" />
+			</div>
+		}
+		<div class="product-details-column">
+			<h2>@product.Value.Name</h2>
+			<h4>@product.Value.Category?.Name</h4>
+			@if (string.IsNullOrEmpty(product.Value.Category?.CreatorsTitle))
+			{
+				<p><strong>Creators:</strong> @product.Value.Creators</p>
+			}
+			else
+			{
+				<p><strong>@product.Value.Category?.CreatorsTitle:</strong> @product.Value.Creators</p>
+			}
+				<p><strong>For Ages:</strong> @product.Value.ContentRating+ </p>
+			@if (product.Value.IsAIAssisted)
+			{
+				<p><i class="bi bi-robot"></i>Used AI with the creation of the product</p>
+				<p>@product.Value.AIAssistsWith</p>
+			}
+			@if (product.Value.ForMatureAudiences)
+			{
+				<h4><i class="bi bi-exclamation-diamond-fill"></i>For Mature Audiences Only</h4>
+						<p><strong>Reason:</strong></p>
+				<p>@product.Value.MatureAudienceReason</p>
+			}
+					<p><strong>Release Date:</strong> @product.Value.ProductLaunchDate</p>
+			<AuthorizeView>
+				@if (product.Value.CreatorId != null)
+				{
+					<p><strong>Added In By:</strong></p>
+					<DisplayUserInfo UserId="@product.Value.CreatorId" />
+				}
+						<p><strong>Last Modified:</strong> @userEditedTime.ToString("f")</p>
+				@if (product.Value.ModifierId != null)
+				{
+					<p><strong>Last Edited By:</strong></p>
+					<DisplayUserInfo UserId="@product.Value.ModifierId" />
+				}
+			</AuthorizeView>
+			<br />
+			<AuthorizeView Roles="Admin, Moderator">
+				<Authorized>
+					<div class="product-lock-button">
+						
+						@if (!product.Value.IsLocked)
+						{
+							<button class="btn btn-primary" onclick="@(() => LockProduct(@product.Value.Slug))">
+								<i class="bi bi-key-fill"></i> Lock
+							</button>
+							<br />
+						}
+						else
+						{
+							<button class="btn btn-primary" onclick="@(() => LockProduct(@product.Value.Slug))">
+								<i class="bi bi-unlock"></i> Unlock
+							</button>
+							<br />
+						}
+					</div>
+				</Authorized>
+			</AuthorizeView>
+			@if (!product.Value.IsLocked)
+			{
+				<AuthorizeView Roles="Admin, Moderator, AlphaTester">
+					<Authorized>
+				<button class="btn btn-primary" onclick="@(() => EditProduct(product.Value.Slug))">
+					Edit Product
+				</button>
+					</Authorized>
+				</AuthorizeView>
+			}
+			else
+			{
+				
+				<div class="format-locked">
+					@if (product.Value.ModifierId != null)
+					{
+						<h4>Locked By:</h4>
+						<DisplayUserInfo UserId="@product.Value.LockedByUser" />
+					}
+					<p><strong>Locked: </strong>@product.Value.lockedReason</p>
+				</div>
+				<AuthorizeView Roles="Admin, Moderator">
+					<Authorized>
+						<button class="btn btn-primary" onclick="@(() => EditProduct(product.Value.Slug))">
+							Edit Product
+						</button>
+					</Authorized>
+					<NotAuthorized>
+						<div class="format-edit-button">
+							<button class="btn btn-primary" disabled>
+								Edit Product
+							</button>
+						</div>
+					</NotAuthorized>
+				</AuthorizeView>
+			}
+		</div>
+		</div>
+		<hr />
+		<div class="product-description">
+			@if (product.Value.HasIssue && !String.IsNullOrEmpty(product.Value.IssueURL) )
+			{
+				<div class="product-warning">
+					<h3><i class="bi bi-exclamation-triangle-fill"></i> Product Warning: </h3>
+					<a target="_blank" rel="noopener noreferrer" href="@product.Value.IssueURL"><strong>@product.Value.Issue</strong></a>
+				</div>
+				<br />
+			}
+			else if (product.Value.HasIssue && String.IsNullOrEmpty(product.Value.IssueURL))
+			{
+				<div class="product-warning">
+					<h3><i class="bi bi-exclamation-triangle-fill"></i> Product Warning: </h3>
+					<p><strong>@product.Value.Issue</strong></p>
+				</div>
+				<br />
+			}
+			<h3>Description:</h3>
+			<p>@product.Value.Description</p>
+			<br />
+			<p><strong>Source: </strong> <a target="_blank" rel="noopener noreferrer" href="@product.Value.DescriptionSource">@product.Value.DescriptionSource</a></p>
+		</div>
+	</div>
+}
+		<h3 id="available">Formats Available</h3>
+		<FormatsPerProduct ProductSlug="@product!.Value.Slug" ProductId="product!.Value.Id" TypeTitle="@TypeTitle" EditionTitle="@EditionTitle"/>
+    </div>
+	<div class="right-column"></div>
+</div>
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	private bool isLoading = true;
+
+	private ProductResponse? product = new ProductResponse();
+	private ProductRequest productEdit = new ProductRequest();
+
+	private DateTimeOffset userEditedTime;
+
+	private string? TypeTitle { get; set; } = "Type";
+	private string? EditionTitle { get; set; } = "Edition";
+
+	protected override async Task OnParametersSetAsync()
+	{
+
+		if (Id == 0 && string.IsNullOrEmpty(Slug))
+		{
+			NavigationManager.NavigateTo("notfound");
+		}
+		else if (Id > 0)
+		{
+			var prodResponse = await ProductService.GetProductById((int)Id);
+			if (prodResponse == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+			}
+			product = prodResponse;
+		}
+		else if (!string.IsNullOrEmpty(Slug))
+		{
+			var prodResponse = await ProductService.GetProductBySlug(Slug);
+			if (prodResponse == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+			}
+			product = prodResponse;
+		}
+		if (!string.IsNullOrWhiteSpace(product!.Value.Category.TypeTitle))
+		{
+			TypeTitle = product!.Value.Category.TypeTitle;
+		}
+		if (!string.IsNullOrWhiteSpace(product!.Value.Category.EditionTitle))
+		{
+			EditionTitle = product!.Value.Category.EditionTitle;
+		}
+		userEditedTime = TimeZoneService.ConvertToUserTime(product.Value.ModifiedDate);
+		isLoading = false;
+	}
+
+	private void EditProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/view/{id}/edit");
+	}
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/edit");
+	}
+
+	private async Task LockProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/lock");
+	}
+}

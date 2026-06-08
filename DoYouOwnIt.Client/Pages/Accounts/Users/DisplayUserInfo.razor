@@ -1,0 +1,101 @@
+﻿@using Microsoft.Extensions.Logging
+@inject NavigationManager NavigationManager
+@inject ILogger<UserCustomize> Logger
+@inject IUserService UserService
+@attribute [AllowAnonymous]
+
+@if (isLoading)
+{
+	<div class="user-image">
+			<img src="..." alt="Profile loading" class="img-thumbnail placeholder-glow" style="max-width: 150px; max-height: 150px;" />
+	</div>
+	<div class="user-information">
+		<h4><span class="placeholder col-6"></span></h4>
+	</div>
+}
+else if (hasError || userResponse == null)
+{
+	<p>User Profile Not Found</p>
+}
+else
+{
+	<div class="user-info-container">
+		@if (!OnlyShowName)
+		{
+			<div class="user-image">
+			@if (!String.IsNullOrEmpty(userResponse!.Value.ProfileImageURL))
+			{
+					<img src="@userResponse!.Value.ProfileImageURL" alt="Profile Image" class="avatar" style="max-width: 50px; max-height: 50px;" />
+			}
+			else
+			{
+					<img src="https://images.gmntgstrg.com/defaultandresourceimages/user.png" alt="User account icons created by Luch Phou" class="avatar" style="max-width: 50px; max-height: 50px;" />
+			}
+			</div>
+		}
+		<div class="user-information">
+			@if (OnlyShowName)
+			{
+				@if (!String.IsNullOrEmpty(userResponse!.Value.DisplayName))
+				{
+					<p><a href="/users/@userResponse.Value.UserName">@userResponse!.Value.DisplayName</a></p>
+				}
+				else
+				{
+					<p><a href="/users/@userResponse.Value.UserName">@userResponse!.Value.UserName</a></p>
+				}
+			}
+			else
+			{
+				@if (!String.IsNullOrEmpty(userResponse!.Value.DisplayName))
+				{
+					<p><strong><a href="/users/@userResponse.Value.UserName">@userResponse!.Value.DisplayName</a></strong></p>
+				}
+				else
+				{
+					<p><strong><a href="/users/@userResponse.Value.UserName">@userResponse!.Value.UserName</a></strong></p>
+				}
+			}
+			
+		</div>
+	</div>
+}
+
+@code {
+	[Parameter]
+	public string? UserId { get; set; }
+
+	[Parameter]
+	public bool OnlyShowName { get; set; } = false;
+
+	private bool isLoading = true;
+	private bool hasError = false;
+
+	private UserResponse? userResponse = new UserResponse();
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.IsNullOrWhiteSpace(UserId))
+		{
+			hasError = true;
+		}
+		else
+		{
+			try
+			{
+				userResponse = await UserService.GetUserByIdAsync(UserId);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error during authorization check for user {UserId}", UserId);
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			finally
+			{
+				isLoading = false;
+			}
+		}
+	}
+
+}

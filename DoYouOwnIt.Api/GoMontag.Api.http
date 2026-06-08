@@ -1,0 +1,30 @@
+@DoYouOwnIt.Api_HostAddress = http://localhost:5049
+
+GET {{DoYouOwnIt.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{DoYouOwnIt.Api_HostAddress}}/api/Product
+Accept: application/json
+
+###
+
+GET {{DoYouOwnIt.Api_HostAddress}}/odata/Product
+Accept: application/json
+
+###
+
+GET {{DoYouOwnIt.Api_HostAddress}}/odata/Product?$filter=Name%20eq%20'Futurama' 
+Accept: application/json
+
+###
+GET {{DoYouOwnIt.Api_HostAddress}}/odata/Product?$filter=Creators%20eq%20'Valve' 
+Accept: application/json
+###
+GET {{DoYouOwnIt.Api_HostAddress}}/odata/Product?$filter=(contains(tolower(Name),'team')%20or%20contains(tolower(Creators),'team'))&$top=5&$select=Id,Name,Creators,Description
+Accept: application/json
+###
+GET {{DoYouOwnIt.Api_HostAddress}}/odata/Product?$filter=(contains(tolower(Name),'futurama')%20or%20contains(tolower(Creators),'team'))&$top=5&$select=Id,Name,Creators,Description
+Accept: application/json
+###

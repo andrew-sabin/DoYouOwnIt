@@ -1,0 +1,32 @@
+﻿.format-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+    width: 100%;
+}
+
+.format-created-cards,
+.format-updated-cards {
+    min-width: 0;
+    width: 75%;
+}
+
+.format-created-cards .row,
+.format-updated-cards .row {
+    margin: 0;
+}
+
+.format-created-cards .card,
+.format-updated-cards .card {
+    height: 100%;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .format-cards-grid {
+        display:none;
+    }
+}

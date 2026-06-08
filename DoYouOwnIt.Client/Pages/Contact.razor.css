@@ -1,0 +1,118 @@
+﻿.contact-grid {
+    display: grid;
+    /* side width used for table of contents / ad slots */
+    --side-width: 120px;
+    /* fixed side columns and a fluid center column with a max width */
+    grid-template-columns: var(--side-width) minmax(0, 900px) var(--side-width);
+    gap: 20px;
+    justify-content: center;
+    align-items: start;
+    padding: 0.5rem 0;
+    width: 100%;
+}
+
+.left-column,
+.right-column {
+    display: block;
+    /* make the columns visually distinct and usable for content */
+    width: var(--side-width);
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.left-column {
+    /* example styling for a table-of-contents area */
+    background: transparent;
+    border-right-color: lightgrey;
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.right-column {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.main-content-column {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+    .main-content-column iframe,
+    .main-content-column img,
+    .main-content-column video {
+        max-width: 100%;
+        height: auto;
+    }
+
+.contact-grid div{
+}
+
+.contact-breadcrumbs {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: center;
+}
+
+.left-contact-column {
+    grid-column: 1;
+    min-width: 0;
+}
+
+.right-contact-column {
+    grid-column: 2;
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .main-content-column {
+        grid-template-columns: 1fr;
+    }
+
+    .right-contact-column {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .left-contact-column {
+        grid-column: 1;
+        grid-row: 2;
+    }
+}
+
+@media (max-width: 768px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+        width: 100%;
+        padding: 0.5rem;
+    }
+    .contact-breadcrumbs {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+
+    /* hide side gutters */
+    .left-column,
+    .right-column {
+        display: none;
+    }
+
+    .main-content-column {
+        grid-column: 1;
+        grid-row: 2;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+        padding: 0 0.75rem;
+    }
+}

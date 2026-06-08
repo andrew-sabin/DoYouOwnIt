@@ -1,0 +1,173 @@
+﻿@page "/users/{UserName}/roles"
+@using DoYouOwnIt_Shared.Models.User
+@attribute [Authorize(Roles = "Admin, Moderator")]
+@inject IUserService UserService
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<UserCustomize> Logger
+
+<h3>UpdateRole</h3>
+
+<nav aria-label="breadcrumb">
+	<ol class="breadcrumb">
+		<li class="breadcrumb-item"><a href="/">Home</a></li>
+		<li class="breadcrumb-item"><a href="/users/@UserName">@UserName's Page</a></li>
+		<li class="breadcrumb-item active">Admin Edit</li>
+	</ol>
+</nav>
+
+<AuthorizeView Context="authState">
+	<Authorized>
+		@if (isLoading)
+		{
+			<p><strong>Loading User Role Please Wait...</strong></p>
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		}
+		else if (!isAuthorized)
+		{
+			<p>You are not authorized to view this page.</p>
+		}
+	</Authorized>
+	<NotAuthorized>
+		<p>You are not authorized to view this page.</p>
+	</NotAuthorized>
+</AuthorizeView>
+@if (isAuthorized)
+		{
+			@if (!isAdmin || (!isModerator && isAuthAdmin))
+			{
+				<PageTitle>Change User Role: @UserName</PageTitle>
+				<h3>Change User's Role</h3>
+				<EditForm Model="addRoleRequest" OnValidSubmit="HandleValidSubmit">
+					<DataAnnotationsValidator />
+					<ValidationSummary />
+					<AuthorizeView Roles="Admin" Context="authState">
+						<Authorized>
+							<div class="mb-3">
+								<label for="profileImageURL" class="form-label>">Profile Image URL</label>
+								<InputSelect id="formatType" @bind-Value="addRoleRequest.addRole" class="form-select">
+									<option value="">User</option>
+									<option value="AlphaTester">AlphaTester</option>
+									<option value="Moderator">Moderator</option>
+									<option value="Admin">Admin</option>
+								</InputSelect>
+								<ValidationMessage For="@(() => addRoleRequest.addRole)" />
+							</div>
+						</Authorized>
+					</AuthorizeView>
+					<AuthorizeView Roles="Moderator" Context="authState">
+						<div class="mb-3">
+							<label for="profileImageURL" class="form-label>">Profile Image URL</label>
+							<InputSelect id="formatType" @bind-Value="addRoleRequest.addRole" class="form-select">
+								<option value="">User</option>
+								<option value="AlphaTester">AlphaTester</option>
+							</InputSelect>
+							<ValidationMessage For="@(() => addRoleRequest.addRole)" />
+						</div>
+					</AuthorizeView>
+					<button type="submit" class="btn btn-primary mt-4">Submit</button>
+				</EditForm>
+			}
+			else
+			{
+				<PageTitle>Permission Denied - DoYouOwnIt</PageTitle>
+				<p>You do not have permission to view this page.</p>
+			}
+		}
+
+
+@code {
+	[Parameter]
+	public string? UserName { get; set; }
+
+	public string CurrentRole { get; set; } = "";
+
+	/* Checks to see if the user for this userpage is an admin or moderator page*/
+	private bool isAdmin = false;
+	private bool isModerator = false;
+	/* Checks to see if the current user is an admin or moderator */
+	private bool isAuthorized = false;
+
+	private bool isAuthAdmin = false;
+
+	private bool isLoading = true;
+
+	private UserRemoveRoleRequest removeRoleRequest = new UserRemoveRoleRequest();
+	private UserRoleAddRequest addRoleRequest = new UserRoleAddRequest();
+
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.IsNullOrWhiteSpace(UserName))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		else
+		{
+			try
+			{
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+
+				if (!user.Identity?.IsAuthenticated ?? true)
+				{
+					NavigationManager.NavigateTo("notfound");
+					return;
+				}
+				var currentUserRole = user.IsInRole("Admin") || user.IsInRole("Moderator");
+				isAuthorized = currentUserRole;
+
+				if (isAuthorized)
+				{
+					var result = await UserService.GetUserRole(UserName);
+					if (result != null && result.Count > 0)
+					{
+						CurrentRole = result[0];
+						removeRoleRequest.removeRole = CurrentRole;
+						removeRoleRequest.userName = UserName;
+					}
+
+					isAdmin = await UserService.IsUserInRole(UserName, "Admin");
+					isModerator = await UserService.IsUserInRole(UserName, "Moderator");
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error loading user data for {UserName}", UserName);
+				NavigationManager.NavigateTo("error");
+			}
+			finally
+			{
+				isLoading = false;
+			}
+		}
+
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		addRoleRequest.userName = UserName!;
+		await UserService.UpdateUserRole(UserName!, addRoleRequest, removeRoleRequest);
+		NavigationManager.NavigateTo($"/users/{UserName}");
+	}
+}

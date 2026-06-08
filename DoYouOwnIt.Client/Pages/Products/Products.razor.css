@@ -1,0 +1,105 @@
+﻿table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+.products-grid {
+    display: grid;
+    /* side width used for table of contents / ad slots */
+    --side-width: 120px;
+    /* fixed side columns and a fluid center column with a max width */
+    grid-template-columns: var(--side-width) minmax(0, 900px) var(--side-width);
+    gap: 20px;
+    justify-content: center;
+    align-items: start;
+    padding: 0.5rem 0;
+}
+
+.left-column,
+.right-column {
+    display: block;
+    /* make the columns visually distinct and usable for content */
+    width: var(--side-width);
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.left-column {
+    /* example styling for a table-of-contents area */
+    background: transparent;
+    border-right-color: lightgrey;
+}
+
+.product-container {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: auto auto;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.product-details-column{
+    padding: 10px;
+    grid-column: 2;
+    margin-right: 75px;
+    min-width: 0;
+}
+.product-description-row {
+    grid-column: 1 / -1;
+    padding: 10px 0;
+}
+
+@media(max-width: 1126px){
+    .product-details-column {
+        margin-right: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    /* make the page a single column on small screens */
+    .products-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+        width: 100%;
+        padding: 0.5rem;
+    }
+
+    /* hide side gutters */
+    .left-column,
+    .right-column {
+        display: none;
+    }
+
+    .main-content-column {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: 0 0.75rem;
+    }
+}
+
+@media(max-width:600px){
+    .product-container {
+        display: grid;
+        grid-template-columns: auto;
+    }
+
+    .product-image-column{
+        grid-column: 1 /span 3;
+        grid-row: 1;
+    }
+
+    .product-details-column {
+        padding: 10px;
+        grid-row: 2;
+        grid-column: 1 /span 2;
+        margin-right: 75px;
+        min-width: 0;
+    }
+
+    .product-description-row {
+        grid-column: 1 /span 2;
+        grid-row: 3;
+        padding: 10px 0;
+    }
+}

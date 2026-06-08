@@ -1,0 +1,161 @@
+﻿@page "/site-news/article/{slug}"
+@inject INewsBlogService articleService
+@inject IUserService UserService
+@inject IUserTimeZoneService TimeZoneService 
+@inject NavigationManager navigationManager
+@inject AuthenticationStateProvider authenticationStateProvider
+
+
+<div class="article-grid">
+    <div class="left-column"></div>
+    <div class="main-content-column">
+        @if (isLoading)
+        {
+            <p><strong>Loading Article Please Wait...</strong></p>
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        }
+        else
+        {
+            @if (newsArticle != null)
+            {
+                <PageTitle>Blog: @newsArticle.Value.Title - DoYouOwnIt</PageTitle>
+                <div class="article-breadcrumbs-col">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/">Home</a></li>
+                            <li class="breadcrumb-item"><a href="/site-news">Blog</a></li>
+                            <li class="breadcrumb-item active">@newsArticle.Value.Title</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="article-title-col">
+                    <hr />
+                    <h3>@newsArticle.Value.Title</h3>
+                    @if (!string.IsNullOrWhiteSpace(newsArticle.Value.CoverImageUrl))
+                    {
+                        <img src="@newsArticle.Value.CoverImageUrl"
+                             style="max-width: min(300px, 100%); max-height: 300px;"
+                             class="img-thumbnail" />
+                    }
+                </div>
+                <div class="article-creation-col">
+                    <hr />
+                    <h4>Blog Type: @newsArticle.Value.ArticleType</h4>
+
+                    @if (articleEditedDate != null && articleEditedDate != articleCreationDate)
+                    {
+                        <p>Created on:@userCreationDate.ToString("f") Lasted Edited:@userEditedDate.ToString("f")</p>
+                    }
+                    else
+                    {
+                        <p>Created on:@userCreationDate.ToString("f")</p>
+                    }
+                </div>
+                <div class="article-authors-col">
+                    @if (newsArticle.Value.AuthorId != newsArticle.Value.ModifierId)
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" onlyShowName="true" />
+                        <p><strong>Lasted Edited By:</strong></p>
+                        <DisplayUserInfo UserId="@editorId" onlyShowName="true" />
+                    }
+                    else
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" />
+                    }
+                </div>
+                <AuthorizeView Roles="Admin" Context="authState">
+                    <Authorized>
+                        <div class="article-edit-button">
+                            <button class="btn btn-primary" onclick="@(() => EditArticle(slug!))">Edit Article</button>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <div class="article-body-col">
+                    <hr />
+                    @((MarkupString)newsArticle.Value.NewsArticle)
+                </div>
+            }
+            else
+            {
+                <h2>404 Article Not Found</h2>
+            }
+        }
+    </div>
+    <div class="right-column"></div>
+</div>
+
+@code {
+    [Parameter]
+    public string? slug { get; set; }
+
+    private DateTimeOffset userCreationDate;
+    private DateTimeOffset userEditedDate;
+
+    private NewsBlogResponse? newsArticle = new NewsBlogResponse();
+
+    private string? authorId { get; set; }
+    private string? editorId { get; set; }
+
+    private DateOnly articleCreationDate { get; set; }
+    private DateOnly? articleEditedDate { get; set; } = null;
+
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (slug != null)
+        {
+            var result = await articleService.GetArticleBySlug(slug);
+            if (result == null)
+            {
+                newsArticle = null;
+            }
+            else
+            {
+                newsArticle = result;
+                authorId = result.Value.AuthorId;
+                editorId = result.Value.ModifierId;
+
+                userCreationDate = TimeZoneService.ConvertToUserTime(newsArticle.Value.CreatedDate);
+                if (result.Value.ModifiedDate != result.Value.CreatedDate)
+                {
+                    userEditedDate = TimeZoneService.ConvertToUserTime(newsArticle.Value.ModifiedDate);
+                }
+            }
+            
+            isLoading = false;
+        }
+        else
+        {
+            newsArticle = null;
+        }
+    }
+
+    private async Task<string> GetUserProfile(string userId)
+    {
+        var user = await UserService.GetUserByIdAsync(userId);
+        if (user == null)
+        {
+            return "Unknown User";
+        }
+        else
+        {
+            var userName = user.Value.UserName;
+            return userName;
+        }
+    }
+
+    private void CreateArticle()
+    {
+        navigationManager.NavigateTo($"/site-news/createArticle");
+    }
+    private void EditArticle(string slug)
+    {
+        navigationManager.NavigateTo($"/site-news/article/{slug}/edit");
+    }
+
+}

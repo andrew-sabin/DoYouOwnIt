@@ -1,0 +1,486 @@
+﻿@page "/products/create"
+@page "/products/view/{Slug}/edit"
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IAuthService AuthService
+@inject IAuthorizationService AuthorizationService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using System.Text.Json
+@attribute [Authorize (Roles ="Admin, Moderator, AlphaTester")]
+
+@if (isLoading)
+{
+	<p><strong>Loading In Product Information Please Wait...</strong></p>
+	<div class="spinner-border" role="status">
+		<span class="visually-hidden">Loading...</span>
+	</div>
+}
+else
+{
+	@if (Id is not null || !string.IsNullOrEmpty(Slug))
+	{
+		<PageTitle>Editing-@product!.Name - DoYouOwnIt</PageTitle>
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products/all/?title=@product.Name">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@Slug">@product.Name</a></li>
+				<li class="breadcrumb-item active">@product.Name Edit</li>
+			</ol>
+		</nav>
+		<h3>Edit Product Information</h3>
+	}
+	else
+	{
+		<PageTitle>Creating a New Product - DoYouOwnIt</PageTitle>
+		<h3>Create New Product</h3>
+	}
+
+	
+
+
+	@if (!product.IsLocked)
+	{
+		@if (!String.IsNullOrEmpty(product.CoverImageURL) && String.IsNullOrEmpty(FileUrl))
+		{
+			<div class="mb-3">
+				<h3>Current Cover Image</h3>
+				<img src="@product.CoverImageURL" alt="Current Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+			</div>
+		}
+		else if (!String.IsNullOrEmpty(product.CoverImageURL) && !String.IsNullOrEmpty(FileUrl))
+		{
+			<div class="mb-3">
+				<h3>Current Cover Image</h3>
+				<img src="@product.CoverImageURL" alt="Current Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+			</div>
+			<div class="mb-3">
+				<h3>New Cover Image</h3>
+				<img src="@FileUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+			</div>
+		}
+		else if (String.IsNullOrEmpty(product.CoverImageURL) && !String.IsNullOrEmpty(FileUrl))
+		{
+			<div class="mb-3">
+				<h3>New Cover Image</h3>
+				<img src="@FileUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+			</div>
+		}
+
+		<EditForm Model="product" OnValidSubmit="HandleValidSubmit">
+			<DataAnnotationsValidator />
+			<div>
+				<label for="productName">Product Name</label>
+				<InputText id="productName" class="form-control" @bind-Value="product.Name" />
+			</div>
+			@if (!String.IsNullOrEmpty(product.Slug))
+			{
+				<AuthorizeView Roles="Admin, Moderator" Context="authState">
+					<Authorized Context="slug">
+						<div>
+							<label for="productSlug">Product Slug</label>
+							<InputText id="productSlug" class="form-control" @bind-Value="product.Slug" />
+						</div>
+					</Authorized>
+				</AuthorizeView>
+			}
+			<div>
+				@if (!String.IsNullOrEmpty(Slug) || Id != null)
+				{
+					<AuthorizeView Roles="Admin, Moderator" Context="authState">
+						<label for="Category">Category</label>
+						<InputSelect id="category" @bind-Value="product.CategoryId" class="form-select">
+							<option value="0">---Select A Category---</option>
+							@foreach (var category in CategoryService.ProductCategories)
+							{
+								<option value="@category.Id">@category.Name</option>
+							}
+						</InputSelect>
+						<ValidationMessage For="@(() => product.CategoryId)" />
+					</AuthorizeView>
+				}
+				else
+				{
+					<AuthorizeView Roles="Admin, Moderator" Context="authState">
+						<label for="Category">Category</label>
+						<InputSelect id="category" @bind-Value="product.CategoryId" class="form-select">
+							<option value="0">---Select A Category---</option>
+							@foreach (var category in CategoryService.ProductCategories)
+							{
+								<option value="@category.Id">@category.Name</option>
+							}
+						</InputSelect>
+						<ValidationMessage For="@(() => product.CategoryId)" />
+					</AuthorizeView>
+					<AuthorizeView Roles="AlphaTester" Context="authState">
+						<label for="Category">Category</label>
+						<InputSelect id="category" @bind-Value="product.CategoryId" class="form-select">
+							<option value="0">---Select A Category---</option>
+							@foreach (var category in CategoryService.ProductCategories)
+							{
+								<option value="@category.Id">@category.Name</option>
+							}
+						</InputSelect>
+						<ValidationMessage For="@(() => product.CategoryId)" />
+					</AuthorizeView>
+					<ValidationMessage For="@(() => product.CategoryId)" />
+				}
+			</div>
+			<div>
+				<label for="productCoverImage">Product Logo URL</label>
+				<SfUploader ID="UploadFiles" AutoUpload="true" AllowedExtensions=".jpg,.jpeg,.png,.gif,.svg" EnableHtmlSanitizer="true">
+					<UploaderAsyncSettings SaveUrl="/api/Image/Save" RemoveUrl="/api/Image/DeleteFile" />
+					<UploaderEvents FileSelected="@OnFileSelected" BeforeRemove="@OnBeforeFileRemoved" ValueChange="@OnChange" Success="@OnSuccess"></UploaderEvents>
+				</SfUploader>
+			</div>
+			<div>
+				<label for="productCreators">Product Creators</label>
+				<InputText id="productCreators" class="form-control" @bind-Value="product.Creators" />
+			</div>
+			<div>
+				<label for="productContentRating">Content Rating</label>
+				<InputNumber id="contentRating" min="3" max="18" @bind-Value="product.ContentRating" />
+			</div>
+			<div>
+				<label for="productLaunchDate">Product Launch Date</label>
+				<InputDate id="productLaunchDate" class="form-control" format="mm/dd/yyyy" @bind-Value="product.ProductLaunchDate" />
+			</div>
+			<div>
+				<label class="form-check-label" for="productIsAIAssisted"><i class="bi bi-robot"></i> Did AI Assist with the Making of This Product?</label>
+				<InputCheckbox id="productIsAIAssisted" class="form-check-input" @bind-Value="product.IsAIAssisted" />
+			</div>
+			@if (product.IsAIAssisted)
+			{
+				<label for="productAIAssistsWith">AI Assisted With</label>
+				<InputTextArea id="productAIAssistsWith" class="form-control" @bind-Value="product.AIAssistsWith" />
+			}
+			<div>
+				<label class="form-check-label" for="productMatureBool"><i class="bi bi-exclamation-diamond-fill"></i> Is This a Product Intended For Mature Audiences</label>
+				<InputCheckbox id="productMatureBool" class="form-check-input" @bind-Value="product.ForMatureAudiences" />
+			</div>
+			@if (product.ForMatureAudiences)
+			{
+				<label for="productMatureReason">Mature Audience Reason</label>
+				<InputTextArea id="productMatureReason" class="form-control" @bind-Value="product.MatureAudienceReason" />
+			}
+			<div>
+				<label class="form-check-label" for="productHasIssue"><i class="bi bi-exclamation-octagon-fill"></i> Does this product have an issue across all formats?</label>
+				<InputCheckbox id="productHasIssue" class="form-check-input" @bind-Value="product.HasIssue" />
+			</div>
+			@if (product.HasIssue)
+			{
+				<div>
+					<label for="productIssue">Issue the product has: </label>
+					<InputTextArea id="productIssue" class="form-control" @bind-Value="product.Issue" />
+				</div>
+				<div>
+					<label for="productIssueURL">Source or URL for said Issue:</label>
+					<InputText id="productIssueURL" class="form-control" @bind-Value="product.IssueURL" />
+				</div>
+			}
+			<div>
+				<label for="productDescription">Description or Summary</label>
+				<InputTextArea id="productDescription" class="form-control" @bind-Value="product.Description" />
+			</div>
+			<div>
+				<label for="productDescriptionSource">Description Source</label>
+				<InputText id="productDescriptionSource" class="form-control" @bind-Value="product.DescriptionSource" />
+			</div>
+		</EditForm>
+		<AuthorizeView Roles="Admin, Moderator" Context="authState">
+			<Authorized>
+				@if (Id != null)
+				{
+					<button type="button" class="btn btn-danger mt-4 mx-2"
+							@onclick="DeleteProduct">
+						Delete
+					</button>
+				}
+			</Authorized>
+		</AuthorizeView>
+		<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+		<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+	}
+	else
+	{
+		<h3>Product Is Locked For Editing</h3>
+		<p><strong>Product Is Currently Locked And Cannot Be Edited At This Moment</strong></p>
+	}
+}
+
+
+
+
+@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	ProductRequest product = new ProductRequest();
+	List<CategoryResponse> categories = new List<CategoryResponse>();
+
+	private bool isLoading = true;
+
+	private List<string> savedFiles = new();
+	private List<string> fileLocations = new();
+	private List<Syncfusion.Blazor.Inputs.FileInfo> uploadedFiles = new(); 
+
+	public string? FileUrl { get; set; } 
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if (CategoryService.ProductCategories.Count == 0)
+		{
+			if (!user.IsInRole("Admin") && !user.IsInRole("Moderator"))
+			{
+				await CategoryService.LoadAllUnlockedProductCategories();
+			}
+			else
+			{
+				await CategoryService.LoadAllProductCategories();
+			}
+		}
+		CategoryService.OnChange += StateHasChanged;
+
+		if (!String.IsNullOrEmpty(Slug))
+		{
+			var result = await ProductService.GetProductBySlug(Slug);
+			Id = result.Value.Id;
+			product = new ProductRequest
+			{
+				Name = result.Value.Name,
+				Slug = result.Value.Slug,
+				ProductLaunchDate = result.Value.ProductLaunchDate,
+				Creators = result.Value.Creators!,
+				CoverImageURL = result.Value.CoverImageURL,
+				ContentRating = result.Value.ContentRating,
+				IsLocked = result.Value.IsLocked,
+				LockedBy = result.Value.LockedByUser,
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith,
+				ForMatureAudiences = result.Value.ForMatureAudiences,
+				MatureAudienceReason = result.Value.MatureAudienceReason,
+				Description = result.Value.Description,
+				DescriptionSource = result.Value.DescriptionSource,
+				CategoryId = result.Value.Category.Id,
+				CategoryName = result.Value.CategoryName ?? string.Empty,
+				HasIssue = result.Value.HasIssue,
+				Issue = result.Value.Issue,
+				IssueURL = result.Value.IssueURL
+			};
+		}
+		if(Id is not null)
+		{
+			var result = await ProductService.GetProductById((int)Id);
+			product = new ProductRequest
+			{
+				Name = result.Value.Name,
+				Slug = result.Value.Slug,
+				ProductLaunchDate = result.Value.ProductLaunchDate,
+				Creators = result.Value.Creators!,
+				CoverImageURL = result.Value.CoverImageURL,
+				IsLocked = result.Value.IsLocked,
+				LockedBy = result.Value.LockedByUser,
+				lockedReason = result.Value.lockedReason,
+				ContentRating = result.Value.ContentRating,
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith,
+				ForMatureAudiences = result.Value.ForMatureAudiences,
+				MatureAudienceReason = result.Value.MatureAudienceReason,
+				Description = result.Value.Description,
+				DescriptionSource = result.Value.DescriptionSource,
+				CategoryId = result.Value.Category.Id,
+				CategoryName = result.Value.CategoryName ?? string.Empty,
+				HasIssue = result.Value.HasIssue,
+				Issue = result.Value.Issue,
+				IssueURL = result.Value.IssueURL
+			};
+		}
+		isLoading = false;
+	}
+
+	private async Task OnFileSelected(SelectedEventArgs args)
+	{
+		if (string.IsNullOrEmpty(Slug))
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "formats" },
+			new { blobDirectory = "newly-created" + "/cover-image"} };
+		}
+		else
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "formats" },
+			new { blobDirectory = Slug + "/cover-image"} };
+		}
+	}
+
+	private async Task OnBeforeFileRemoved(BeforeRemoveEventArgs args)
+	{
+		if (string.IsNullOrEmpty(Slug))
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "formats" },
+			new { blobDirectory = "newly-created" + "/cover-image"} };
+		}
+		else
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "formats" },
+			new { blobDirectory = Slug + "/cover-image"} };
+		}
+	}
+
+	private async Task OnChange(UploadChangeEventArgs args)
+	{
+		uploadedFiles.Clear();
+		if (args?.Files != null)
+		{
+			foreach (var f in args.Files)
+			{
+				uploadedFiles.Add(f.FileInfo);
+			}
+		}
+	}
+
+	private void OnFailure(FailureEventArgs args)
+	{
+		Console.WriteLine($"Upload failed: {args?.Response.ResponseText}");
+	}
+
+	private void OnSuccess(SuccessEventArgs args)
+	{
+		try
+		{
+			if (args == null) return;
+
+			// The server returns JSON like: { files: [...], fileLocations: [...] }
+			var response = args.Response.ResponseText;
+			if (response == null)
+				return;
+			ParseResponseString(response);
+
+			FileUrl = fileLocations[0];
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"OnSuccess parse error: {ex.Message}");
+			FileUrl = null;
+		}
+	}
+
+	private void ParseResponseString(string json)
+	{
+		using var doc = System.Text.Json.JsonDocument.Parse(json);
+		ParseResponseJsonElement(doc.RootElement);
+	}
+
+	private void ParseResponseJsonElement(JsonElement root)
+	{
+		if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+		{
+			if (root.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var f in files.EnumerateArray())
+				{
+					var name = f.GetString();
+					if (!string.IsNullOrEmpty(name) && !savedFiles.Contains(name))
+						savedFiles.Add(name);
+				}
+			}
+
+			if (root.TryGetProperty("fileLocations", out var locs) && locs.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var l in locs.EnumerateArray())
+				{
+					var loc = l.GetString();
+					if (!string.IsNullOrEmpty(loc) && !fileLocations.Contains(loc))
+						fileLocations.Add(loc);
+				}
+			}
+		}
+	}
+
+
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		if(!string.IsNullOrEmpty(FileUrl))
+			product.CoverImageURL = FileUrl;
+
+		var selectedCategory = CategoryService.ProductCategories.FirstOrDefault(c => c.Id == product.CategoryId);
+		Console.WriteLine($"selectedCategory: {selectedCategory.Name}");
+		if (selectedCategory != null)
+		{
+			product.CategoryName = selectedCategory.Name;
+			Console.WriteLine($"Category: {product.CategoryName}");
+		}
+
+		if (Id == null && String.IsNullOrEmpty(Slug))
+		{
+			await ProductService.CreateProduct(product);
+			NavigationManager.NavigateTo($"/products/all/?title={product.Name}");
+		}
+		else
+		{
+			await ProductService.UpdateProduct((int)Id!, product);
+			NavigationManager.NavigateTo($"/products/view/{Slug}");
+		}
+
+		// Optionally, redirect or show a success message
+	}
+
+	async Task DeleteProduct()
+	{
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this product?");
+		if(Id != null && confirmed)
+		{
+			await ProductService.DeleteProduct((int)Id);
+			NavigationManager.NavigateTo("/");
+		}
+
+	}
+
+	async Task CancelEdit()
+	{
+		if(Id is not null || String.IsNullOrWhiteSpace(Slug))
+		{
+			NavigationManager.NavigateTo($"/products/view/{Slug}");
+		}
+		else
+		{
+			NavigationManager.NavigateTo("/");
+		}
+	}
+
+
+	public void Dispose()
+	{
+		// Unsubscribe from the event to prevent memory leaks
+		CategoryService.OnChange -= StateHasChanged;
+	}
+}

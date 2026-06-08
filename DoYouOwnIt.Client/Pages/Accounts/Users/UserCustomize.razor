@@ -1,0 +1,300 @@
+﻿@page "/users/{UserName}/customize"
+@inject IUserService UserService
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<UserCustomize> Logger
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using System.Text.Json
+@attribute [Authorize]
+
+<div class="site-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/users/@UserName">@UserName's Page</a></li>
+				<li class="breadcrumb-item active">Customizing Profile Page</li>
+			</ol>
+		</nav>
+
+		<AuthorizeView Context="authState">
+			<Authorized>
+				@if (isLoading)
+				{
+					<p><strong>Loading Profile Information Please Wait...</strong></p>
+					<div class="spinner-border" role="status">
+						<span class="visually-hidden">Loading...</span>
+					</div>
+				}
+				else if (isAuthorized)
+				{
+					<PageTitle>Your Customization Options</PageTitle>
+					<h3>User Customization Options</h3>
+				}
+				else if (!isAuthorized)
+				{
+					<PageTitle>Permission Denied</PageTitle>
+					<p>You are not authorized to view this page.</p>
+				}
+			</Authorized>
+			<NotAuthorized>
+				<p>You are not authorized to view this page.</p>
+			</NotAuthorized>
+		</AuthorizeView>
+		@if (isAuthorized)
+		{
+			<p>Customize your profile information below. Changes will be reflected on your public profile.</p>
+			@if (!String.IsNullOrEmpty(customization.ProfileImageURL) && String.IsNullOrEmpty(FileUrl))
+			{
+				<div class="mb-3">
+					<h3>Current Cover Image</h3>
+					<img src="@customization.ProfileImageURL" alt="Current Format Cover Image" class="avatar" style="max-width: 150px; max-height: 150px;" />
+				</div>
+			}
+			else if (!String.IsNullOrEmpty(customization.ProfileImageURL) && !String.IsNullOrEmpty(FileUrl))
+			{
+				<div class="mb-3">
+					<h3>Current Cover Image</h3>
+					<img src="@customization.ProfileImageURL" alt="Current Format Cover Image" class="avatar" style="max-width: 150px; max-height: 150px;" />
+				</div>
+				<div class="mb-3">
+					<h3>New Cover Image</h3>
+					<img src="@FileUrl" alt="Format Cover Image" class="avatar" style="max-width: 150px; max-height: 150px;" />
+				</div>
+			}
+			else if (String.IsNullOrEmpty(customization.ProfileImageURL) && !String.IsNullOrEmpty(FileUrl))
+			{
+				<div class="mb-3">
+					<h3>New Cover Image</h3>
+					<img src="@FileUrl" alt="Format Cover Image" class="avatar" style="max-width: 150px; max-height: 150px;" />
+				</div>
+			}
+			<EditForm Model="customization" OnValidSubmit="HandleValidSubmit">
+				<DataAnnotationsValidator />
+				<div class="mb-3">
+					<label for="profileImageURL" class="form-label>">Profile Image</label>
+					<SfUploader ID="UploadFiles" AutoUpload="true" AllowedExtensions=".jpg,.jpeg,.png, .gif" EnableHtmlSanitizer="true">
+						<UploaderAsyncSettings SaveUrl="/api/Image/Save" RemoveUrl="/api/Image/DeleteFile"></UploaderAsyncSettings>
+						<UploaderEvents FileSelected="@OnFileSelected" BeforeRemove="@OnBeforeFileRemoved" ValueChange="@OnChange" Success="@OnSuccess" />
+					</SfUploader>
+					<ValidationMessage For="@(() => customization.ProfileImageURL)" />
+				</div>
+				<div class="mb-3">
+					<label for="displayName" class="form-label>">Display Name</label>
+					<InputText id="displayName" class="form-control" @bind-Value="customization.DisplayName" />
+					<ValidationMessage For="@(() => customization.DisplayName)" />
+				</div>
+				<div class="mb-3">
+					<label for="DOB" class="form-label>">Date of Birth</label>
+					<InputDate max="@DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")" min="@DateOnly.FromDateTime(DateTime.Now.AddYears(-120)).ToString("yyyy-MM-dd")"
+							   id="DOB" @bind-Value="customization.DateOfBirth" class="form-control" />
+					<ValidationMessage For="@(() => customization.DateOfBirth)" />
+				</div>
+				<div class="mb-3">
+					<label for="email" class="form-label>">Email</label>
+					<InputText id="email" type="email" class="form-control" @bind-Value="customization.Email" />
+					<ValidationMessage For="@(() => customization.Email)" />
+				</div>
+				<div>
+					<label for="websiteURL" class="form-label>">Website URL</label>
+					<InputText id="websiteURL" class="form-control" @bind-Value="customization.WebsiteURL" />
+					<ValidationMessage For="@(() => customization.WebsiteURL)" />
+				</div>
+				<div class="mb-3">
+					<label for="bio" class="form-label>">Bio</label>
+					<InputTextArea id="bio" class="form-control" @bind-Value="customization.Bio" />
+					<ValidationMessage For="@(() => customization.Bio)" />
+				</div>
+				
+				<button type="submit" class="btn btn-primary mt-4">Submit</button>
+			</EditForm>
+		}
+	</div>
+	<div class="right-column"></div>
+</div>
+
+
+
+
+
+@code {
+	[Parameter]
+	public string? UserName { get; set; }
+
+	private bool isAuthorized = false;
+	private bool isLoading = true;
+
+	private List<string> savedFiles = new();
+	private List<string> fileLocations = new();
+	private List<Syncfusion.Blazor.Inputs.FileInfo> uploadedFiles = new();
+
+	public string? FileUrl { get; set; }
+
+	UserRequest customization = new UserRequest();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+
+
+		if (string.IsNullOrWhiteSpace(UserName))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		else
+		{
+			try
+			{
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+
+				if (!user.Identity?.IsAuthenticated ?? true)
+				{
+					NavigationManager.NavigateTo("notfound");
+					return;
+				}
+				var currentUserName = user.Identity!.Name;
+				isAuthorized = string.Equals(currentUserName, UserName, StringComparison.OrdinalIgnoreCase);
+				if (isAuthorized)
+				{
+					var result = await UserService.GetUserAsync(UserName);
+					if (result != null)
+					{
+						customization.DisplayName = result.Value.DisplayName;
+						customization.Bio = result.Value.Bio;
+						customization.DateOfBirth = result.Value.DateOfBirth;
+						customization.Email = result.Value.Email;
+						customization.WebsiteURL = result.Value.WebsiteURL;
+						customization.ProfileImageURL = result.Value.ProfileImageURL;
+					}
+					else
+					{
+						NavigationManager.NavigateTo("notfound");
+						return;
+					}
+				}
+			} 
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error during authorization check for user {UserName}", UserName);
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			finally
+			{
+				isLoading = false;
+			}
+
+		}
+	}
+	private async Task OnFileSelected(SelectedEventArgs args)
+	{
+		args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "users" },
+		new { blobDirectory = UserName + "/avatar-pfp"} };
+	}
+
+	private async Task OnBeforeFileRemoved(BeforeRemoveEventArgs args)
+	{
+		args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = "users" },
+		new { blobDirectory = UserName + "/avatar-pfp"} };
+	}
+
+	private async Task OnChange(UploadChangeEventArgs args)
+	{
+		uploadedFiles.Clear();
+		if (args?.Files != null)
+		{
+			foreach (var f in args.Files)
+			{
+				uploadedFiles.Add(f.FileInfo);
+			}
+		}
+	}
+
+	private void OnFailure(FailureEventArgs args)
+	{
+		
+	}
+
+	private void ParseResponseString(string json)
+	{
+		using var doc = System.Text.Json.JsonDocument.Parse(json);
+		ParseResponseJsonElement(doc.RootElement);
+	}
+
+	private void ParseResponseJsonElement(JsonElement root)
+	{
+		if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+		{
+			if (root.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var f in files.EnumerateArray())
+				{
+					var name = f.GetString();
+					if (!string.IsNullOrEmpty(name) && !savedFiles.Contains(name))
+						savedFiles.Add(name);
+				}
+			}
+
+			if (root.TryGetProperty("fileLocations", out var locs) && locs.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var l in locs.EnumerateArray())
+				{
+					var loc = l.GetString();
+					if (!string.IsNullOrEmpty(loc) && !fileLocations.Contains(loc))
+						fileLocations.Add(loc);
+				}
+			}
+		}
+	}
+
+	private void OnSuccess(SuccessEventArgs args)
+	{
+		try
+		{
+			if (args == null) return;
+
+			// The server returns JSON like: { files: [...], fileLocations: [...] }
+			var response = args.Response.ResponseText;
+			if (response == null)
+				return;
+			ParseResponseString(response);
+
+			FileUrl = fileLocations[0];
+		}
+		catch (Exception ex)
+		{
+			FileUrl = null;
+		}
+	}
+
+
+	async Task HandleValidSubmit()
+	{
+		await AuthService.EnsureTokenValidAsync();
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		if(!string.IsNullOrEmpty(FileUrl))
+			customization.ProfileImageURL = FileUrl;
+
+
+		await UserService.UpdateUserAsync(UserName!, customization);
+		NavigationManager.NavigateTo($"/users/{UserName}");
+	}
+
+}

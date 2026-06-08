@@ -1,0 +1,15 @@
+﻿.avatar {
+    vertical-align: middle;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ccc;
+}
+
+.user-info-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+

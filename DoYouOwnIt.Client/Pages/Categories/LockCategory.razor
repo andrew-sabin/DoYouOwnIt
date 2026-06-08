@@ -1,0 +1,131 @@
+﻿@page "/categories/lock/{Slug}"
+@using DoYouOwnIt.Shared.Enums
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject IAuthService AuthService
+@attribute [Authorize(Roles ="Admin")]
+
+@if (string.IsNullOrWhiteSpace(Slug))
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/categories">Category</a></li>
+			<li class="breadcrumb-item active">Unknown</li>
+		</ol>
+	</nav>
+}
+else
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/categories">Category</a></li>
+			<li class="breadcrumb-item active">Unknown</li>
+		</ol>
+	</nav>
+	<PageTitle>DoYouOwnIt Lock Category: @category.Name</PageTitle>
+	<h3>Lock Format</h3>
+}
+
+<EditForm Model="@category">
+	<div class="form-group">
+		<InputCheckbox id="categoryIsLocked" class="form-check-input" @bind-Value="category.IsLocked" />
+		<label class="form-check-label" for="categoryIsLocked">Locked</label>
+	</div>
+	@if (category.IsLocked)
+	{
+		<div class="form-group">
+			<label for="categoryLockedReason">Lock Reason</label>
+			<InputTextArea id="categoryLockedReason" class="form-control" @bind-Value="category.lockedReason" />
+		</div>
+	}
+	</EditForm>
+<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+
+	@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	CategoryRequest category = new CategoryRequest();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await AuthService.EnsureTokenValidAsync();
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (!user.Identity?.IsAuthenticated ?? true)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if(Id != null)
+		{
+			var response = await CategoryService.GetCategoryById(Id.Value);
+			if(response != null)
+			{
+				category = new CategoryRequest
+				{
+					Name = response.Name,
+					Description = response.Description,
+					Slug = response.Slug,
+					IsLocked = response.IsLocked,
+					lockedReason = response.lockedReason,
+					CreatorsTitle = response.CreatorsTitle,
+					FormatsTitle = response.FormatsTitle,
+					TypeTitle = response.TypeTitle,
+					EditionTitle = response.EditionTitle
+				};
+			}
+			else
+			{
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+		else if(Slug != null && Slug != "")
+		{
+			var response = await CategoryService.GetCategoryBySlug(Slug);
+			if(response != null)
+			{
+				category = new CategoryRequest
+				{
+					Id = response.Id,
+					Name = response.Name,
+					Description = response.Description,
+					Slug = response.Slug,
+					IsLocked = response.IsLocked,
+					lockedReason = response.lockedReason,
+					CreatorsTitle = response.CreatorsTitle,
+					FormatsTitle = response.FormatsTitle,
+					TypeTitle = response.TypeTitle,
+					EditionTitle = response.EditionTitle
+				};
+				Id = response.Id;
+			}
+			else
+			{
+				Console.WriteLine($"Category '{Slug}' not found.");
+				NavigationManager.NavigateTo("not found");
+			}
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await CategoryService.LockCategory((int)Id!, category);
+		NavigationManager.NavigateTo("/categories");
+	}
+	async Task CancelEdit()
+	{
+		NavigationManager.NavigateTo("/categories");
+	}
+}

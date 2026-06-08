@@ -1,0 +1,82 @@
+﻿.homepage-grid {
+    display: grid;
+    /* side width used for table of contents / ad slots */
+    --side-width: 380px;
+    /* fixed side columns and a fluid center column with a max width */
+    grid-template-columns: var(--side-width) minmax(0, 900px) var(--side-width);
+    gap: 20px;
+    justify-content: center;
+    align-items: start;
+    padding: 0.5rem 0;
+}
+
+.main-content-column{
+    display: grid;
+    column-gap: 20px;
+    justify-items: center;
+    width: 100%;
+    min-width: 0;
+    padding-top: 50px;
+}
+
+.site-title {
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+}
+
+.site-title img {
+    display: block;
+    width: min(100%, 900px);
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+}
+
+.search-bar {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    align-items:center;
+}
+
+.left-column{
+    display:grid;
+    width: var(--side-width);
+}
+.right-column {
+    display: block;
+    /* make the columns visually distinct and usable for content */
+    width: var(--side-width);
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.left-column {
+    /* example styling for a table-of-contents area */
+/*    background: transparent;
+    border-right-color: lightgrey;*/
+}
+
+@media (max-width: 962px) {
+    .homepage-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+        width: 100%;
+        padding: 0.5rem;
+    }
+
+    .left-column,
+    .right-column {
+        display: none;
+    }
+
+    .main-content-column {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        justify-items: center;
+        margin: 0 auto;
+        padding: 75px 0.75rem 0;
+    }
+}

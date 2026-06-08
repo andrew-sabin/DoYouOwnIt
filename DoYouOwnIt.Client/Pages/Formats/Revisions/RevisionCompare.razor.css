@@ -1,0 +1,60 @@
+﻿body {
+}
+.revision-page-grid {
+    display: grid;
+    /* side width used for table of contents / ad slots */
+    --side-width: 120px;
+    /* fixed side columns and a fluid center column with a max width */
+    grid-template-columns: var(--side-width) minmax(0, 900px) var(--side-width);
+    gap: 20px;
+    justify-content: center;
+    align-items: start;
+    padding: 0.5rem 0;
+}
+
+.left-column,
+.right-column {
+    display: block;
+    /* make the columns visually distinct and usable for content */
+    width: var(--side-width);
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.left-column {
+    /* example styling for a table-of-contents area */
+    background: transparent;
+    border-right-color: lightgrey;
+}
+
+.old-values {
+    float: left;
+    width: 48%;
+    padding-right: 2%;
+    box-sizing: border-box;
+}
+
+.new-values {
+    float: right;
+    width: 48%;
+    padding-left: 2%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    /* make the page a single column on small screens */
+    .revision-page-grid {
+        grid-template-columns: 1fr;
+        padding: 0.5rem;
+    }
+    /* hide side gutters */
+    .left-column,
+    .right-column {
+        display: none;
+    }
+
+    .main-content-column {
+        width: 100%;
+        padding: 0 0.75rem;
+    }
+}

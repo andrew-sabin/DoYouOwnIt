@@ -1,0 +1,74 @@
+﻿@using DoYouOwnIt.Client.Helpers
+@inject IFormatService FormatService
+@inject IFormatRevisionService RevisionService
+@inject IUserService UserService
+
+@if (!isLoadingFormats)
+{
+    <div class="format-cards-grid">
+
+        <div class="format-updated-cards">
+            <div class="row g-3">
+                <div class="card my-2">
+                    <div class="card-header">
+                        <h5 class="card-title">Recently Updated Formats</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (updatedFormats != null)
+                        {
+                            @foreach (var updatedFormat in updatedFormats!)
+                            {
+                                <h6><strong><u><a href="/products/view/@updatedFormat.Product!.Slug/">@updatedFormat.Product!.Name</a></u></strong></h6>
+                                <p><strong><a href="/products/view/@updatedFormat.Product!.Slug/formats/@CreateIDHash(updatedFormat.Id)">@updatedFormat.Type : @updatedFormat.Edition</a></strong></p>
+                                <p><strong>Updated:</strong> @updatedFormat.ModifiedDate.ToFuzzyDate()</p>
+                                if (!String.IsNullOrEmpty(updatedFormat.ModifierName))
+                                {
+                                    <p><strong>Updated By: </strong><a href="users/@updatedFormat.ModifierName"> @updatedFormat.ModifierName</a></p>
+                                }
+                                else if (!string.IsNullOrEmpty(updatedFormat.ModifierId))
+                                {
+                                    <p><strong>Updated By: </strong><DisplayUserInfo UserId="@updatedFormat.ModifierId" OnlyShowName="true" /></p>
+                                }
+                                <hr />
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <p><strong>Loading In Recent Formats...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}
+
+@code {
+    public List<FormatResponse>? updatedFormats { get; set; }
+
+    private bool isLoadingFormats = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var getUpdatedFormats = await FormatService.GetRecentlyUpdatedFormats(8);
+        if (getUpdatedFormats != null)
+            updatedFormats = getUpdatedFormats;
+
+        isLoadingFormats = false;
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+}

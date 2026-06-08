@@ -1,0 +1,46 @@
+﻿@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div @ref="HTMLContainer" class="html-content">
+    @((MarkupString)HTMLContent)
+</div>
+
+@code {
+    [Parameter]
+    public string HTMLContent { get; set; } = string.Empty;
+    [Parameter]
+    public EventCallback<string> OnImageClick { get; set; }
+
+    private ElementReference HTMLContainer;
+    private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<HTMLContentViewer>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(HTMLContent))
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/htmlImageInterceptor.js");
+
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await _jsModule.InvokeVoidAsync("attachImageClickHandlers", HTMLContainer, _dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnImageClicked(string imageUrl)
+    {
+        OnImageClick.InvokeAsync(imageUrl);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("cleanup", HTMLContainer);
+            await _jsModule.DisposeAsync();
+        }
+        _dotNetRef?.Dispose();
+    }
+
+
+}

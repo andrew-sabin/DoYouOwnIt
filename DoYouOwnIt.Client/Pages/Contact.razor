@@ -1,0 +1,204 @@
+﻿@page "/contact"
+@using DoYouOwnIt_Shared.Models.Emails
+@using DoYouOwnIt_Shared.Entities.Extras
+@using DoYouOwnIt.Client.Services
+@using System.Text.Json
+@using DoYouOwnIt.Client.Helpers
+@inject IEmailService emailService
+@inject NavigationManager Navigation
+@inject HttpClient httpClient
+
+<PageTitle>Contact Page - DoYouOwnIt</PageTitle>
+
+<div class="contact-grid">
+    <div class="contact-breadcrumbs">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active">Contact</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="left-column"></div>
+    <div class="main-content-column">
+        <div class="left-contact-column">
+            <div class="follow-site">
+                <h3>Follow This Site</h3>
+                <a class="btn btn-primary" href="javascript:void(0)" title="Facebook"><i class="bi bi-facebook"></i></a>
+                <a class="btn btn-primary" href="https://DoYouOwnIt.bsky.social" title="Bluesky"><i class="bi bi-bluesky"></i></a>
+                <a class="btn btn-primary" href="https://x.com/DoYouOwnIt" title="Twitter"><i class="bi bi-twitter-x"></i></a>
+                <a class="btn btn-primary" href="javascript:void(0)" title="Instagram"><i class="bi bi-instagram"></i></a>
+            </div>
+            <div class="follow-me">
+                <h3>Follow Andy</h3>
+                <a class="btn btn-primary" href="https://andyoftheandes.bsky.social" title="Bluesky"><i class="bi bi-bluesky"></i></a>
+                <a class="btn btn-primary" href="javascript:void(0)" title="Instagram"><i class="bi bi-instagram"></i></a>
+            </div>
+        </div>
+        <div class="right-contact-column">
+            <h3>Contact Me</h3>
+
+            <EditForm Model="@model" OnValidSubmit="@HandleSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Your Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="model.Name" />
+                    <ValidationMessage For="@(() => model.Name)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Your Email</label>
+                    <InputText id="email" class="form-control" @bind-Value="model.Email" />
+                    <ValidationMessage For="@(() => model.Email)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="subject" class="form-label">Subject</label>
+                    <InputSelect id="subject" @bind-Value="model.Subject" class="form-select">
+                        <option value="General Questions">General Questions</option>
+                        <option value="Bug Report">Bug Report</option>
+                        <option value="Editing Requests for Products or Formats">Editing Requests for Products or Formats</option>
+                        <option value="Take Down Requests">Take Down Requests</option>
+                        <option value="Moderation Concerns">Moderation Concerns</option>
+                        <option value="Other Questions or Comments">Other Questions or Comments</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => model.Subject)" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="message" class="form-label">Message</label>
+                    <InputTextArea id="message" class="form-control" rows="5" @bind-Value="model.Message" />
+                    <ValidationMessage For="@(() => model.Message)" />
+                </div>
+                <br />
+                <p>To send a message please confirm you are<strong> Not a Robot.</strong></p>
+                <GoogleRecaptcha @ref="googleRecaptcha"
+                                 SuccessCallBack="OnSuccess"
+                                 TimeOutCallBack="OnTimeout"
+                                 ServerValidationErrorCallBack="ServerSideValidationError"
+                                 ServerSideValidationHandler="ServerSideValidationHandler" />
+                
+                @if (_isVerified)
+                {
+                    <button type="submit" class="btn btn-primary" disabled="@isSending">
+                        @(isSending ? "Sending..." : "Send Message")
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-primary" disabled>Send Message</button>
+                }
+
+            </EditForm>
+            <br />
+            
+
+            @if (!string.IsNullOrEmpty(resultMessage))
+            {
+                <div class="alert alert-@(isSuccess ? "success" : "danger") mt-3">
+                    @resultMessage
+                </div>
+            }
+        </div>
+        <br />
+    </div>
+    <div class="right-column"></div>
+</div>
+
+
+
+
+
+@code {
+    private ContactModel model = new();
+    private bool isSending = false;
+    private string resultMessage = "";
+    private bool isSuccess = false;
+
+    public required GoogleRecaptcha googleRecaptcha;
+
+    private bool _isVerified = false;
+    private string errorMessage = "";
+
+    private void OnSuccess(CaptchaSuccessEventArgs e)
+    {
+        _isVerified = true;
+        base.StateHasChanged();
+    }
+
+    private void OnTimeout(CaptchaTimeOutEventArgs e)
+    {
+        _isVerified = false;
+        Console.WriteLine($"Captcha Time Out with message {e.ErrorMessage}");
+    }
+
+    private void ServerSideValidationError(CaptchaServerSideValidationErrorEventArgs e)
+    {
+        errorMessage = $"Captcha server side validation error: {e.ErrorMessage}";
+    }
+
+    private async Task<ServerSideCaptchaValidationResultModel> ServerSideValidationHandler(ServerSideCaptchaValidationRequestModel requestModel)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync("api/Captcha/validate", requestModel.CaptchaResponse);
+
+            var result = await response.Content.ReadFromJsonAsync<CaptchaVerificationResponse>();
+
+            Console.WriteLine($"(response.IsSuccessStatusCode: {response.IsSuccessStatusCode} \nresult.Success: {result!.Success}");
+
+            if (response.IsSuccessStatusCode && result != null && result.Success)
+            {
+                Console.WriteLine("CAPTCHA validation successful.");
+                return new ServerSideCaptchaValidationResultModel(true, "CAPTCHA validation successful.");
+            }
+            else
+            {
+                var errorMessage = result?.Message ?? "CAPTCHA validation failed on the server.";
+                Console.WriteLine("CAPTCHA validation failed on the server.");
+                return new ServerSideCaptchaValidationResultModel(false, errorMessage);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            return new ServerSideCaptchaValidationResultModel(false, $"Network Error: {ex.Message}");
+        }
+
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSending = true;
+        resultMessage = "";
+
+        var request = new SendEmailRequest
+        {
+            ToEmail = "andy@DoYouOwnIt.com", // Your receiving email
+            ToName = model.Name,
+            Subject = $"Contact Form: {model.Subject}",
+            Body = $@"
+                Name: {model.Name}
+                Email: {model.Email}
+
+                Message:
+                {model.Message}",
+            IsHtml = false
+        };
+
+        var response = await emailService.SendEmailAsync(request);
+
+        isSuccess = response.Success;
+        resultMessage = response.Success
+            ? "Your message was successfully sent! We'll get back to you soon."
+            : "Sorry, there was an error sending your message. Please try again.";
+
+        if (response.Success)
+        {
+            model = new ContactModel(); // Clear form
+        }
+
+        isSending = false;
+    }
+}

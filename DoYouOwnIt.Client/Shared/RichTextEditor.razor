@@ -1,0 +1,402 @@
+﻿@using System.Net.Http.Json
+@using HtmlAgilityPack
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.RichTextEditor
+@using System.Threading.Tasks
+@using Syncfusion.DocIO
+@using Syncfusion.DocIO.DLS
+@using Azure.Storage.Blobs;
+@using Azure.Storage.Blobs.Models;
+@inject NavigationManager navigationManager
+@inject HttpClient HttpClient
+@inject IConfiguration _configuration
+
+@using static System.Net.WebRequestMethods
+
+<SfRichTextEditor @ref="rteObj" Placeholder="@Placeholder" @bind-Value="@Content" MaxLength="@MaxLength" ShowCharCount="true" EnableXhtml="true">
+    <RichTextEditorPasteCleanupSettings KeepFormat="false" PlainText="false" Prompt="false" />
+    <RichTextEditorQuickToolbarSettings Image="@Image" />
+    <RichTextEditorEvents BeforeUploadImage="@OnBeforeUploadImage" FileUploading="@OnMediaUploading" OnActionBegin="@actionBegin"
+       FileRemoving="@FileRemoveHandler" OnImageRemoving="@OnImageRemovingHandler" ImageDelete="@OnImageDeleteHandler" />
+    <RichTextEditorImageSettings MaxFileSize="5000000" SaveUrl="api/Image/Save" Path="@uploadPath" RemoveUrl="api/Image/DeleteFile" />
+    <RichTextEditorMediaSettings SaveFormat="SaveFormat.Base64" SaveUrl="api/Video/Save"></RichTextEditorMediaSettings>
+    <RichTextEditorAudioSettings SaveURL="api/Video/Save" Path="@uploadPath" MaxFileSize="5000000"></RichTextEditorAudioSettings>
+    <RichTextEditorVideoSettings SaveURL="api/Video/Save" Path="@uploadPath" MaxFileSize="5000000"></RichTextEditorVideoSettings>
+    <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow" > 
+        <RichTextEditorCustomToolbarItems>
+            <RichTextEditorCustomToolbarItem Name="ImportHTML">
+                <Template>
+                    <SfUploader ID="UploadFiles" ShowFileList="false" CssClass="e-import">
+                        <UploaderAsyncSettings SaveUrl="api/RTFEditor/Import"></UploaderAsyncSettings>
+                        <UploaderEvents Success="OnSuccess"></UploaderEvents>
+                        <UploaderButtons Browse=""></UploaderButtons>
+                    </SfUploader>
+                </Template>
+            </RichTextEditorCustomToolbarItem>
+            <RichTextEditorCustomToolbarItem Name="ExportHTML">
+                <Template>
+                    <SfButton OnClick="DownloadFile" CssClass="e-icons e-export"></SfButton>
+                </Template>
+            </RichTextEditorCustomToolbarItem>
+            <RichTextEditorCustomToolbarItem Name="ImportRTF">
+                <Template>
+                    <SfUploader ID="UploadFiles" ShowFileList="false" CssClass="e-import">
+                        <UploaderAsyncSettings SaveUrl="api/RTFEditor/Import/RTF"></UploaderAsyncSettings>
+                        <UploaderEvents Success="OnSuccess"></UploaderEvents>
+                        <UploaderButtons Browse=""></UploaderButtons>
+                    </SfUploader>
+                </Template>
+            </RichTextEditorCustomToolbarItem>
+            <RichTextEditorCustomToolbarItem Name="ExportRTF">
+                <Template>
+                    <SfButton OnClick="OnExport" CssClass="e-icons e-export"></SfButton>
+                </Template>
+            </RichTextEditorCustomToolbarItem>
+        </RichTextEditorCustomToolbarItems>
+    </RichTextEditorToolbarSettings>
+</SfRichTextEditor>
+
+<style>
+
+    .e-btn.e-icons.e-export::before {
+        content: '\e780';
+        color: #fff;
+    }
+
+    .e-richtexteditor .e-rte-toolbar .e-toolbar-item .e-icons.e-export {
+        padding: 8px;
+    }
+
+    .e-import.e-upload .e-upload-browse-btn {
+        font-family: "e-icons";
+    }
+
+    .e-import.e-upload .e-file-select-wrap {
+        padding: 0px;
+    }
+
+    .e-import.e-upload .e-file-drop, .e-import.e-upload .e-file-select {
+        display: none;
+    }
+
+    .e-import .e-upload-browse-btn::before {
+        content: '\e726';
+    }
+</style>
+
+<div class="upload-amount">
+
+</div>
+
+
+@code {
+    [Parameter]
+    public string Content { get; set; } = string.Empty;
+    [Parameter]
+    public string Placeholder { get; set; } = "Please enter in a review here....";
+    [Parameter]
+    public int MaxLength { get; set; } = 5000;
+
+    [Parameter]
+    public int imageLimit { get; set; } = 5;
+    [Parameter]
+    public int videoLimit { get; set; } = 2;
+    [Parameter]
+    public int audioLimit { get; set; } = 3;
+
+    [Parameter]
+    public string? saveDirectory { get; set; } = "https://images.gmntgstrg.com/formats/";
+    [Parameter]
+    public string? ContainerName { get; set; }
+    [Parameter]
+    public string? ProductSlug { get; set; }
+    [Parameter]
+    public string? FormatHash { get; set; }
+
+    SfRichTextEditor rteObj;
+    [Inject]
+    IJSRuntime? jSRuntime { get; set; }
+
+
+    private int imageCount = 0;
+    private int videoCount = 0;
+    private int audioCount = 0;
+
+    private string? blobDirectory { get; set; }
+    private string? uploadPath { get; set; }
+
+    public string[]? header { get; set; }
+    private string? fileName { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(ProductSlug) && !string.IsNullOrWhiteSpace(FormatHash))
+        {
+            blobDirectory = ProductSlug + "/" + FormatHash + "/images";
+        }
+        else if (!string.IsNullOrWhiteSpace(ProductSlug) && string.IsNullOrWhiteSpace(FormatHash))
+        {
+            blobDirectory = ProductSlug + "/images";
+        }
+        else
+        {
+            blobDirectory = "images";
+        }
+
+        uploadPath = saveDirectory + blobDirectory + "/";
+    }
+
+    public void actionBegin(ActionBeginEventArgs args)
+    {
+
+        var htmlDoc = new HtmlDocument();
+        htmlDoc.LoadHtml(rteObj.Value!);
+        if (args.RequestType == "Image")
+        {
+            // Query for img elements with class 'e-rte-image'
+            var imageNodes = htmlDoc.DocumentNode.SelectNodes("//img[contains(@class, 'e-rte-image')]");
+
+            // Count the matching nodes
+            imageCount = imageNodes != null ? imageNodes.Count : 0;
+            if (imageCount == imageLimit)
+            {
+                args.Cancel = true;
+            }
+        }
+        if (args.RequestType == "Video")
+        {
+            // Query for video elements with class 'e-rte-video'
+            var videoNodes = htmlDoc.DocumentNode.SelectNodes("//video[contains(@class, 'e-rte-video')]");
+
+            // Count the matching nodes
+            videoCount = videoNodes != null ? videoNodes.Count : 0;
+            if (videoCount == videoLimit)
+            {
+                args.Cancel = true;
+            }
+        }
+        if (args.RequestType == "Audio")
+        {
+            // Query for audio elements with class 'e-rte-audio'
+            var audioNodes = htmlDoc.DocumentNode.SelectNodes("//audio[contains(@class, 'e-rte-audio')]");
+
+            // Count the matching nodes
+            audioCount = audioNodes != null ? audioNodes.Count : 0;
+            if (audioCount == audioLimit)
+            {
+                args.Cancel = true;
+            }
+        }
+    }
+
+    public void FileRemoveHandler(RemovingEventArgs args)
+    {
+        args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = ContainerName }, new { blobDirectory = blobDirectory } };
+    }
+
+    public void OnBeforeUploadImage(ImageUploadingEventArgs args)
+    {
+        args.CurrentRequest = new List<object> { new { Authorization = "" }, new {containerName = ContainerName }, new { blobDirectory = blobDirectory} };
+    }
+
+    public void OnMediaUploading(FileUploadingEventArgs args)
+    {
+        args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = ContainerName }, new { blobDirectory = blobDirectory } };
+    }
+
+
+    private void ImageUploadSuccess(ImageSuccessEventArgs args)
+    {
+        var headers = args.Response!.Headers!.ToString();
+        header = headers.Split("name: ");
+        header = header[1].Split("\r");
+
+        // Update the modified image name to display a image in the editor.
+        args.File!.Name = header[0];
+
+    }
+
+    public async Task OnImageRemovingHandler(RemovingEventArgs args)
+    {
+        args.CurrentRequest = new List<object> {new {Authorization = ""}, new {containerName = ContainerName}, new{blobDirectory = blobDirectory}};
+    }
+
+    public async Task OnImageDeleteHandler(AfterImageDeleteEventArgs args)
+    {
+        var imageSrc = args.Src;
+        var fileName = imageSrc!.Split('/').Last();
+        var content = new MultipartFormDataContent();
+        var dummyFile = new ByteArrayContent(new byte[0]);
+        content.Add(dummyFile, "UploadFiles", fileName);
+        var request = new HttpRequestMessage(HttpMethod.Post, "api/Image/DeleteFile")
+        {
+            Content = content
+        };
+        request.Headers.Add("containerName", ContainerName);
+        request.Headers.Add("blobDirectory", blobDirectory);
+
+        try
+        {
+            var response = await HttpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Image deleted successfully: {fileName}");
+            }
+            else
+            {
+                Console.WriteLine($"Image deletion failed: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting image: {ex.Message}");
+        }
+    }
+
+    private void onSelectionChange(Syncfusion.Blazor.RichTextEditor.SelectionChangedEventArgs args)
+    {
+        var contentSelected = args.SelectedContent;
+    }
+
+    private async Task onImageDelete(object args)
+    {
+        await HttpClient.PostAsJsonAsync("api/Image/Remove", fileName);
+    }
+
+    public void OnVideoSelctedHandler(SelectedEventArgs args)
+    {
+        foreach (var file in args.FilesData)
+        {
+            var filename = args.FilesData[0].Name;
+            var path = @"path" + args.FilesData[0].Name;
+            FileStream fileStream = new FileStream(path, FileMode.Create, FileAccess.Write);
+
+            var storageString = _configuration.GetValue<string>("ConnectionStrings:storageConnection");
+
+            var container = new BlobContainerClient(storageString, ContainerName);
+            var createResponse = container.CreateIfNotExistsAsync();
+
+            if (createResponse != null)
+                container.SetAccessPolicyAsync(PublicAccessType.Blob);
+
+            string blobPath = string.IsNullOrEmpty(blobDirectory) ?
+                        filename : $"{blobDirectory}/{filename}";
+
+            var blob = container.GetBlobClient(blobPath);
+
+            blob.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots);
+            blob.UploadAsync(fileStream);
+        }
+    }
+
+    public async Task OnSuccess(SuccessEventArgs args)
+    {
+        var headers = args.Response.Headers.ToString();
+        var header = headers.Split("rtevalue: ");
+        header = header[1].Split("\r");
+        this.Content = header[0];
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task DownloadFile()
+    {
+        if (!string.IsNullOrEmpty(Content) && jSRuntime != null)
+        {
+            WordDocument document = GetDocument(Content);
+            MemoryStream stream = new MemoryStream();
+            document.Save(stream, Syncfusion.DocIO.FormatType.Html);
+            await SaveAs(jSRuntime, "DoYouOwnItDocument.html", stream.ToArray());
+            document.Close();
+            stream.Flush();
+            stream.Dispose();
+        }
+    }
+
+    public async Task SaveAs(IJSRuntime js, string filename, byte[] data)
+    {
+        await js.InvokeVoidAsync(
+            "saveAsFile",
+            filename,
+            Convert.ToBase64String(data)
+        );
+    }
+
+    public WordDocument GetDocument(string htmlText)
+    {
+        WordDocument document = new WordDocument();
+        IWSection section = document.AddSection();
+        IWParagraph paragraph = section.AddParagraph();
+        paragraph.AppendHTML(htmlText);
+        return document;
+    }
+
+    public WordDocument GetRTFDocument(string RTFText)
+    {
+        WordDocument? document = null;
+        if (!string.IsNullOrEmpty(RTFText))
+        {
+            MemoryStream stream = new MemoryStream();
+            StreamWriter writer = new StreamWriter(stream, System.Text.Encoding.Default);
+            writer.Write(RTFText);
+            writer.Flush();
+            stream.Position = 0;
+            document = new WordDocument(stream, Syncfusion.DocIO.FormatType.Html, XHTMLValidationType.None);
+        }
+        return document;
+    }
+
+    public async Task OnExport()
+    {
+        WordDocument document = GetDocument(Content);
+        MemoryStream stream = new MemoryStream();
+        document.Save(stream, Syncfusion.DocIO.FormatType.Rtf);
+        stream.Position = 0;
+        await SaveAs(jSRuntime, "sample.rtf", stream.ToArray());
+        document.Close();
+        stream.Flush();
+        stream.Dispose();
+    }
+
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>()
+    {
+        new ToolbarItemModel() { Command = ToolbarCommand.Bold },
+        new ToolbarItemModel() { Command = ToolbarCommand.Italic },
+        new ToolbarItemModel() { Command = ToolbarCommand.Underline },
+        new ToolbarItemModel() { Command = ToolbarCommand.StrikeThrough },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Formats },
+        new ToolbarItemModel() { Command = ToolbarCommand.Alignments },
+        new ToolbarItemModel() { Command = ToolbarCommand.Blockquote },
+		new ToolbarItemModel() { Command = ToolbarCommand.NumberFormatList },
+        new ToolbarItemModel() { Command = ToolbarCommand.BulletFormatList },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.HorizontalLine},
+        new ToolbarItemModel() { Command = ToolbarCommand.CreateLink },
+        new ToolbarItemModel() { Command = ToolbarCommand.Image},
+        new ToolbarItemModel() { Command = ToolbarCommand.Video},
+        new ToolbarItemModel() { Command = ToolbarCommand.Audio},
+		new ToolbarItemModel() { Command = ToolbarCommand.CreateTable },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Undo },
+		new ToolbarItemModel() { Command = ToolbarCommand.Redo },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Name="ExportHTML", TooltipText="Export Document as an HTML File"},
+        new ToolbarItemModel() { Name="ExportRTF", TooltipText= "Export Document as an RTF File"}
+};
+
+    private List<ImageToolbarItemModel> Image = new List<ImageToolbarItemModel>()
+    {
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Replace },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Align },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Caption },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Remove },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Separator },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Display },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.AltText },
+        new ImageToolbarItemModel() { Command = ImageToolbarCommand.Dimension }
+    };
+
+
+}

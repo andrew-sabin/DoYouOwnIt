@@ -1,0 +1,18 @@
+﻿global using Microsoft.EntityFrameworkCore;
+global using DoYouOwnIt.Shared.Entities;
+global using DoYouOwnIt.Api.Repositories;
+global using DoYouOwnIt.Api.Services;
+global using DoYouOwnIt.Shared.Models.Category;
+global using DoYouOwnIt.Api.Data;
+global using DoYouOwnIt.Shared.Models.Product;
+global using DoYouOwnIt.Shared.Models.Format;
+global using DoYouOwnIt.Shared.Models.Store;
+global using DoYouOwnIt.Shared.Models.Availability;
+global using DoYouOwnIt.Shared.Models.FormatType;
+global using DoYouOwnIt.Shared.Helpers;
+global using Microsoft.AspNetCore.Authorization;
+global using DoYouOwnIt.Api.Services.Interface;
+using Azure.Identity;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;

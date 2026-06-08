@@ -1,0 +1,347 @@
+﻿@page "/products/view/{ProductSlug}/formats/{hashedFormatId}/revisions/view/{hashedRevisionId}"
+
+@inject IFormatService FormatService
+@inject IFormatRevisionService RevisionService
+@inject IProductService ProductService
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using BlazorTextDiff
+
+
+<div class="revision-page-grid">
+    <div class="left-column"></div>
+    <div class="main-content-column">
+        <h3>Comparing Revisions</h3>
+        
+        
+        @if (hasOldRevision)
+        {
+            @if (oldRevisionId != null)
+            {
+                if (oldRevisionId != format!.Value.formatrevisionid && newRevisionId == format.Value.formatrevisionid)
+                {
+                    <button type="button" class="btn btn-primary mt-4" onclick="@ChangeToOlderRevision">Switch To Revision @CreateIDHash((int)@oldRevisionId) (older)</button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-primary disabled mt-4">Switch To Revision @CreateIDHash((int)@oldRevisionId) (older)</button>
+                }
+            }
+            @* if (newRevisionId != format!.Value.formatrevisionid)
+            {
+                <button type="button" class="btn btn-primary mt-4" onclick="@ChangeToNewerRevision">Switch To Revision @CreateIDHash(newRevisionId) (newer)</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary disabled mt-4">Switch To Revision @CreateIDHash(newRevisionId) (newer)</button>
+            } *@
+
+            <TextDiff OldText="@oldDescription" NewText="@newDescription"
+                      CollapseContent="true"
+                      IgnoreCase="true"
+                      IgnoreWhiteSpace="false"
+                      Class="my-diff">
+                <Header>
+                    <div style="padding: 10px 12px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                        <strong>Changed Description</strong>
+                        <small class="text-muted ms-2"><code>@CreateIDHash(@oldRevision!.Value.Id) (old)</code> → <code>@CreateIDHash(@newRevisionId) (new)</code></small>
+                        <br />
+                        <span class="diff-stats-badge warning">@context.LineModificationCount modified</span>
+                        <span class="diff-stats-badge danger">@context.LineDeletionCount deleted</span>
+                        <span class="diff-stats-badge success">@context.LineAdditionCount added</span>
+                    </div>
+                </Header>
+            </TextDiff>
+            <div class="old-values">
+                <h3>Old Revision Values: </h3>
+                <p><strong>Modifier: </strong> <a href="/users/@oldRevision!.Value.ModifierName">@oldRevision!.Value.ModifierName</a></p>
+                @if (oldRevision!.Value.IsAIAssisted)
+                {
+                    <p><strong>Is AIAssisted: </strong><span class="badge bg-success">Yes</span></p>
+                    <p><strong>AI Assists With:</strong>@oldRevision.Value.AIAssistsWith</p>
+                }
+                else
+                {
+                    <p><strong>Is AIAssisted: </strong><span class="badge bg-danger">No</span></p>
+                }
+                @if (oldRevision.Value.IsInPrint)
+                {
+                    <p><strong>Is In Print: </strong><span class="badge bg-success">Yes</span></p>
+                }
+                else
+                {
+                    <p><strong>Is In Print: </strong><span class="badge bg-danger">No</span></p>
+                }
+                <p><strong>Ownership Level: </strong> <u>@GetEnumDisplayName(@oldRevision.Value.OwnershipLevel)</u></p>
+            </div>
+
+            <div class="new-values">
+                <h3>New Revision Values: </h3>
+                <p><strong>Modifier: </strong> <a href="/users/@newRevision!.Value.ModifierName">@newRevision!.Value.ModifierName</a></p>
+                @if (newRevision!.Value.IsAIAssisted)
+                {
+                    <p><strong>Is AIAssisted: </strong><span class="badge bg-success">Yes</span></p>
+                    <p><strong>AI Assists With:</strong>@newRevision.Value.AIAssistsWith</p>
+                }
+                else
+                {
+                    <p><strong>Is AIAssisted: </strong><span class="badge bg-danger">No</span></p>
+                }
+                @if (newRevision.Value.IsInPrint)
+                {
+                    <p><strong>Is In Print: </strong><span class="badge bg-success">Yes</span></p>
+                }
+                else
+                {
+                    <p><strong>Is In Print: </strong><span class="badge bg-danger">No</span></p>
+                }
+                <p><strong>Ownership Level: </strong> <u>@GetEnumDisplayName(@newRevision.Value.OwnershipLevel)</u></p>
+            </div>
+        }
+        else
+        {
+            if (newRevision != null)
+            {
+                @* if (newRevisionId != format!.Value.formatrevisionid)
+                {
+                    <button type="button" class="btn btn-primary mt-4" onclick="@ChangeToNewerRevision">Switch To Revision @CreateIDHash(newRevisionId)</button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-primary disabled mt-4">Switch To Revision @CreateIDHash(newRevisionId)</button>
+                } *@
+                
+                <TextDiff OldText="@newDescription" NewText="@newDescription"
+                          CollapseContent="true"
+                          IgnoreCase="true"
+                          IgnoreWhiteSpace="false"
+                          Class="my-diff">
+                    <Header>
+                        <div style="padding: 10px 12px; background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                            <strong>Changed Description</strong>
+                            <small class="text-muted ms-2"><code>@CreateIDHash(@newRevisionId) (new)</code></small>
+                            <br />
+                            <span class="diff-stats-badge warning">@context.LineModificationCount modified</span>
+                            <span class="diff-stats-badge danger">@context.LineDeletionCount deleted</span>
+                            <span class="diff-stats-badge success">@context.LineAdditionCount added</span>
+                        </div>
+                    </Header>
+                </TextDiff>
+                <div class="old-values">
+                    <h3>Revision Values: </h3>
+                    <p><strong>Modifier: </strong> <a href="/users/@newRevision!.Value.ModifierName">@newRevision!.Value.ModifierName</a></p>
+                    @if (newRevision!.Value.IsAIAssisted)
+                    {
+                        <p><strong>Is AIAssisted: </strong><span class="badge bg-success">Yes</span></p>
+                        <p><strong>AI Assists With:</strong>@newRevision.Value.AIAssistsWith</p>
+                    }
+                    else
+                    {
+                        <p><strong>Is AIAssisted: </strong><span class="badge bg-danger">No</span></p>
+                    }
+                    @if (newRevision.Value.IsInPrint)
+                    {
+                        <p><strong>Is In Print: </strong><span class="badge bg-success">Yes</span></p>
+                    }
+                    else
+                    {
+                        <p><strong>Is In Print: </strong><span class="badge bg-danger">No</span></p>
+                    }
+                    <p><strong>Ownership Level: </strong> <u>@GetEnumDisplayName(@newRevision.Value.OwnershipLevel)</u></p>
+                </div>
+                <div class="new-values">
+                </div>
+            }
+            
+        }
+    </div>
+    <div class="right-column"></div>
+</div>
+
+
+
+
+
+@code {
+    [Parameter]
+    public string? hashedRevisionId { get; set; }
+    [Parameter]
+    public string? hashedFormatId { get; set; }
+    [Parameter]
+    public string? ProductSlug { get; set; }
+
+    private FormatRevisionResponse? newRevision { get; set; }
+    private FormatRevisionResponse? oldRevision { get; set; }
+    private FormatResponse? format { get; set; }
+    private ProductResponse? product { get; set; }
+    private FormatRequest? formatRequest { get; set; }
+
+    private int formatId { get; set; }
+    private int newRevisionId { get; set; }
+
+    private bool hasOldRevision { get; set; } = false;
+    private int? oldRevisionId { get; set; }
+
+    private bool formatMatchesNewRevisionId { get; set; } = false;
+
+    private string? newDescription { get; set; }
+    private string? oldDescription { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProductSlug == null)
+        {
+            NavigationManager.NavigateTo("not found");
+        }
+        else
+        {
+            product = await ProductService.GetProductBySlug(ProductSlug);
+            if (hashedFormatId != null)
+            {
+                formatId = DecodeHash(hashedFormatId);
+                format = await FormatService.GetFormatByID(formatId);
+                if (format != null && product != null)
+                {
+                    formatRequest = new FormatRequest
+                    {
+                        FormatTypeId = format.Value.FormatTypeId,
+                        Type = format.Value.Type,
+                        Edition = format.Value.Edition,
+                        IsLocked = format.Value.IsLocked,
+                        lockedReason = format.Value.lockedReason,
+                        CoverImageUrl = format.Value.CoverImageUrl,
+                        Slug = format.Value.Slug,
+                        ReleaseDate = format.Value.ReleaseDate,
+                        ProductId = product.Value.Id
+                    };
+                    if (hashedRevisionId != null)
+                    {
+                        newRevisionId = DecodeHash(hashedRevisionId);
+                        if (newRevisionId == format.Value.formatrevisionid)
+                            formatMatchesNewRevisionId = true;
+
+                        newRevision = await RevisionService.GetRevisionById(newRevisionId);
+                        if (newRevision == null)
+                        {
+                            NavigationManager.NavigateTo("not found");
+                        }
+                        else
+                        {
+                            newDescription = newRevision.Value.Description;
+                            if (newRevision.Value.PreviousRevisionId != null)
+                            {
+                                oldRevisionId = newRevision.Value.PreviousRevisionId;
+                                hasOldRevision = true;
+                                oldRevision = await RevisionService.GetRevisionById((int)oldRevisionId);
+                                if (oldRevision != null)
+                                    oldDescription = oldRevision.Value.Description;
+                                else
+                                {
+                                    NavigationManager.NavigateTo("not found");
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("not found");
+                }
+            }
+            else
+            {
+                NavigationManager.NavigateTo("not found");
+            }
+        }
+
+
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+    private int DecodeHash(string hash)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var realId = sqids.Decode(hash).Single();
+        return realId;
+    }
+
+    private string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Name ?? value.ToString();
+    }
+
+    private string GetEnumDisplayDescription(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Description ?? value.ToString();
+    }
+
+    async Task ChangeToNewerRevision()
+    {
+        await AuthService.EnsureTokenValidAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            NavigationManager.NavigateTo("not found");
+            return;
+        }
+        if (formatRequest != null)
+        {
+            formatRequest.formatrevisionid = newRevisionId;
+            await FormatService.UpdateFormat(formatId, formatRequest);
+            NavigationManager.NavigateTo($"/products/view/{ProductSlug}/formats/{hashedFormatId}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("not found");
+        }
+    }
+
+    async Task ChangeToOlderRevision()
+    {
+        await AuthService.EnsureTokenValidAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            NavigationManager.NavigateTo("not found");
+            return;
+        }
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to revert to the older the revision?\nOnce you do, the newer revision will be deleted.");
+        if (formatRequest != null && oldRevisionId != null && confirmed)
+        {
+            formatRequest.formatrevisionid = (int)oldRevisionId;
+            await FormatService.UpdateFormat(formatId, formatRequest);
+            await RevisionService.DeleteRevision(newRevisionId);
+            NavigationManager.NavigateTo($"/products/view/{ProductSlug}/formats/{hashedFormatId}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("not found");
+        }
+    }
+}

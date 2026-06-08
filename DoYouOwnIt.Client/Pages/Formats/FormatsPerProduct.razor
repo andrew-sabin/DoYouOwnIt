@@ -1,0 +1,243 @@
+﻿@inject IProductService ProductService
+@inject IFormatService FormatService
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@attribute [AllowAnonymous]
+
+
+<hr />
+@if (isLoading)
+{
+    <p><strong>Loading In Format Information Please Wait...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}
+else
+{
+    @if (totalFormats == 0)
+    {
+        <h3>No Formats Found for this Product.</h3>
+        @if (!product!.Value.IsLocked)
+        {
+            <AuthorizeView Roles="Admin, Moderator, AlphaTester" Context="authState">
+                <Authorized>
+                    <button class="btn btn-primary" mb-2 @onclick="CreateFormat">
+                        Create Format
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        }
+        else
+        {
+            <AuthorizeView Roles="Admin, Moderator" Context="authState">
+                <Authorized>
+                    <button class="btn btn-primary" mb-2 @onclick="CreateFormat">
+                        Create Format
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        }
+        <br />
+    }
+    else
+    {
+        
+        @if (!product!.Value.IsLocked)
+        {
+            <AuthorizeView Roles="Admin, Moderator, AlphaTester" Context="authState">
+                <Authorized>
+                    <button class="btn btn-primary" mb-2 @onclick="CreateFormat">
+                        Create Format
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        }
+        else
+        {
+            <AuthorizeView Roles="Admin, Moderator" Context="authState">
+                <Authorized>
+                    <button class="btn btn-primary" mb-2 @onclick="CreateFormat">
+                        Create Format
+                    </button>
+                </Authorized>
+            </AuthorizeView>
+        }
+        <br />
+
+        <input @bind="formatFilter" placeholder="Search formats by Type or Edition..." class="form-control mb-3" />
+
+        <QuickGrid Items="filteredFormats" Pagination="@pagination">
+            <TemplateColumn Title="">
+                <ChildContent Context="p">
+                    @if (string.IsNullOrEmpty(p.CoverImageUrl))
+                    {
+                        <a href="@($"products/view/{ProductSlug}/formats/{CreateIDHash(p.Id)}")">
+                            <img src="https://images.gmntgstrg.com/defaultandresourceimages/vecteezy_default-image-missing-placeholder_48910778.jpg"
+                                 class="img-thumbnail"
+                                 style="max-width: min(50px, 100%); max-height: 75px;"
+                                 alt="Missing Image Picture Created By: Khanh Nguyen" />
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="@($"products/view/{ProductSlug}/formats/{CreateIDHash(p.Id)}")">
+                            <img src="@p.CoverImageUrl" class="img-thumbnail" 
+                            style="max-width: min(50px, 100%); max-height: 75px; min-width: 50px; min-height: auto;" /></a>
+                    }
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Property=" p => p.Type" Title="@TypeTitle" Sortable="true" />
+            <PropertyColumn Property=" p => p.Edition" Title="@EditionTitle" />
+            <PropertyColumn Property=" p => p.ReleaseDate" Title="Release Date" Sortable="true" />
+        </QuickGrid>
+
+        <Paginator State="@pagination" />
+        <br />
+    }
+
+}
+
+
+
+
+@code {
+    [Parameter]
+    public int? ProductId { get; set; }
+    [Parameter]
+    public string? ProductSlug { get; set; }
+    [Parameter]
+    public string? TypeTitle { get; set; } = "Type";
+    [Parameter]
+    public string? EditionTitle { get; set; } = "Edition";
+
+    private string formatFilter = string.Empty;
+    private int totalFormats = 0;
+
+    private bool isLoading = true;
+
+
+    ProductResponse? product = new();
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 5 };
+
+    private List<FormatResponse> formats = new List<FormatResponse>();
+    private IQueryable<FormatResponse>? queryableFormats;
+    private IQueryable<FormatResponse>? filteredFormats => queryableFormats?.Where(f => f.Type.Contains(formatFilter, StringComparison.OrdinalIgnoreCase) || f.Edition.Contains(formatFilter));
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(ProductSlug) && ProductId == 0 || ProductId == null)
+        {
+            await LoadFormatsFromSlug();
+            isLoading = false;
+        }
+        else if (ProductId > 0)
+        {
+            product = await ProductService.GetProductById((int)ProductId);
+            await LoadFormats();
+            isLoading = false;
+        }
+    }
+
+    private async Task GoToPageAsync(int pageIndex)
+    {
+        await pagination.SetCurrentPageIndexAsync(pageIndex);
+    }
+
+    private string? PageButtonClass(int pageIndex) => pagination.CurrentPageIndex == pageIndex ? "current" : null;
+
+    private string? AriaCurrentValue(int pageIndex) => pagination.CurrentPageIndex == pageIndex ? "page" : null;
+
+    private async Task LoadFormats()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/format/product/{ProductId}");
+
+            // Add this debug output
+            // var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await Http.GetFromJsonAsync<List<FormatResponse>>($"api/format/product/{ProductId}");
+                queryableFormats = result?.AsQueryable();
+				totalFormats = queryableFormats?.Count() ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+    private async Task LoadFormatsFromSlug()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/format/product/slug/{ProductSlug}");
+			var productResponse = await Http.GetFromJsonAsync<ProductResponseJustCategoryId>($"api/product/slug/{ProductSlug}");
+
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await Http.GetFromJsonAsync<List<FormatResponse>>($"api/format/product/{productResponse!.Id}");
+                queryableFormats = result?.AsQueryable();
+                totalFormats = queryableFormats?.Count() ?? 0;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+				totalFormats = 0;
+			}
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 6,
+            Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+    private void CreateFormat()
+    {
+        NavigationManager.NavigateTo($"/products/view/{ProductSlug}/formats/create");
+    }
+
+    private string GetEnumDisplayName(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Name ?? value.ToString();
+    }
+
+    private string GetEnumDisplayDescription(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.Description ?? value.ToString();
+    }
+    
+    private string GetEnumDisplayGroup(Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+                        .Cast<DisplayAttribute>()
+                        .FirstOrDefault();
+        return attr?.GroupName ?? value.ToString();
+    }
+}
+
+
