@@ -1,3 +1,7 @@
+## New Current Web App Project Information
+This is an out of date repository. I am currently using a Blazor Web App instead of a Web Assembly App for the GoMontag website.
+**Updated Repository Here:** [GoMontagPublic Repository](https://github.com/andrew-sabin/GoMontagPublic)
+
 # Do You Own It
 Public repository for a web application where users can give information or reviews on a format for different products. Focus on if they own a specific product, the quality of a product based on a format, etc.
 
