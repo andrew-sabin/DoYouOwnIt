@@ -1,5 +1,6 @@
 ## New Current Web App Project Information
 This is an out of date repository. I am currently using a Blazor Web App instead of a Web Assembly App for the GoMontag website.
+This new repo is what I put into my Portfolio
 **Updated Repository Here:** [GoMontagPublic Repository](https://github.com/andrew-sabin/GoMontagPublic)
 
 # Do You Own It
